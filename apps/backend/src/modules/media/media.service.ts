@@ -41,7 +41,7 @@ function sniff(buf: Buffer): string | null {
 
 @Injectable()
 export class MediaService {
-  private readonly supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient | null = null;
   private readonly bucket: string;
 
   constructor(private readonly prisma: PrismaService) {
@@ -49,14 +49,20 @@ export class MediaService {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     this.bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
 
-    if (!url || !key) {
+    if (url && key) {
+      this.supabase = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+  }
+
+  private getClient(): SupabaseClient {
+    if (!this.supabase) {
       throw new InternalServerErrorException(
-        'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios',
+        'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios para operações com imagens',
       );
     }
-    this.supabase = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    return this.supabase;
   }
 
   async upload(file: UploadedImage | undefined, owner: { tenantId?: string; userId: string }) {
@@ -79,7 +85,7 @@ export class MediaService {
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const storagePath = `${folder}/${filename}`;
 
-    const { error } = await this.supabase.storage
+    const { error } = await this.getClient().storage
       .from(this.bucket)
       .upload(storagePath, file.buffer, { contentType: mime, upsert: false });
 
@@ -88,7 +94,7 @@ export class MediaService {
     }
 
     // URL pública
-    const { data: urlData } = this.supabase.storage.from(this.bucket).getPublicUrl(storagePath);
+    const { data: urlData } = this.getClient().storage.from(this.bucket).getPublicUrl(storagePath);
     const publicUrl = urlData.publicUrl;
 
     const record = await this.prisma.mediaFile.create({
@@ -125,7 +131,7 @@ export class MediaService {
     if (!allowed) throw new NotFoundException('Imagem não encontrada');
 
     // Remove do Supabase Storage
-    await this.supabase.storage.from(this.bucket).remove([media.storagePath]);
+    await this.getClient().storage.from(this.bucket).remove([media.storagePath]);
 
     await this.prisma.mediaFile.delete({ where: { id } });
     return { ok: true };
