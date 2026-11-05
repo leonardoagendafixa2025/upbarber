@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // =====================================================================
@@ -1420,15 +1421,16 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-/// Imagens enviadas pelo painel (logo, capa, galeria, avatares). Guardadas no banco para o backup ser único.
+/// Imagens enviadas pelo painel (logo, capa, galeria, avatares). Armazenadas no Supabase Storage.
 model MediaFile {
-  id        String   @id @default(uuid())
-  tenantId  String?
-  userId    String?
-  mime      String
-  size      Int
-  data      Bytes
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  tenantId    String?
+  userId      String?
+  mime        String
+  size        Int
+  storagePath String   // caminho no bucket do Supabase Storage
+  publicUrl   String   // URL pública gerada pelo Supabase Storage
+  createdAt   DateTime @default(now())
 
   @@index([tenantId])
   @@index([userId])

@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../../core/infrastructure/database/prisma/prisma.service';
 
 /** Arquivo recebido pelo multer (tipagem mínima para não depender de @types/multer) */
@@ -15,6 +22,13 @@ const USER_QUOTA = 20 * 1024 * 1024; // 20 MB para usuário sem barbearia (clien
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
+const EXT_MAP: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
 /** Detecta o tipo real pelos primeiros bytes (não confia só no mimetype informado) */
 function sniff(buf: Buffer): string | null {
   if (buf.length < 12) return null;
@@ -27,7 +41,23 @@ function sniff(buf: Buffer): string | null {
 
 @Injectable()
 export class MediaService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly supabase: SupabaseClient;
+  private readonly bucket: string;
+
+  constructor(private readonly prisma: PrismaService) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    this.bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+
+    if (!url || !key) {
+      throw new InternalServerErrorException(
+        'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios',
+      );
+    }
+    this.supabase = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
 
   async upload(file: UploadedImage | undefined, owner: { tenantId?: string; userId: string }) {
     if (!file || !file.buffer?.length) throw new BadRequestException('Envie uma imagem');
@@ -35,6 +65,7 @@ export class MediaService {
     const mime = sniff(file.buffer);
     if (!mime || !ALLOWED.has(mime)) throw new BadRequestException('Formato não suportado. Use JPG, PNG, WEBP ou GIF.');
 
+    // Verifica quota (soma do size no banco)
     const where = owner.tenantId ? { tenantId: owner.tenantId } : { userId: owner.userId, tenantId: null };
     const used = await this.prisma.mediaFile.aggregate({ where, _sum: { size: true } });
     const quota = owner.tenantId ? TENANT_QUOTA : USER_QUOTA;
@@ -42,10 +73,37 @@ export class MediaService {
       throw new PayloadTooLargeException('Espaço para imagens esgotado. Remova fotos antigas.');
     }
 
-    return this.prisma.mediaFile.create({
-      data: { tenantId: owner.tenantId ?? null, userId: owner.userId, mime, size: file.size, data: file.buffer },
-      select: { id: true, mime: true, size: true },
+    // Faz upload para Supabase Storage
+    const folder = owner.tenantId ? `tenants/${owner.tenantId}` : `users/${owner.userId}`;
+    const ext = EXT_MAP[mime] ?? 'jpg';
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const storagePath = `${folder}/${filename}`;
+
+    const { error } = await this.supabase.storage
+      .from(this.bucket)
+      .upload(storagePath, file.buffer, { contentType: mime, upsert: false });
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha no upload: ${error.message}`);
+    }
+
+    // URL pública
+    const { data: urlData } = this.supabase.storage.from(this.bucket).getPublicUrl(storagePath);
+    const publicUrl = urlData.publicUrl;
+
+    const record = await this.prisma.mediaFile.create({
+      data: {
+        tenantId: owner.tenantId ?? null,
+        userId: owner.userId,
+        mime,
+        size: file.size,
+        storagePath,
+        publicUrl,
+      },
+      select: { id: true, mime: true, size: true, publicUrl: true },
     });
+
+    return record;
   }
 
   async get(id: string) {
@@ -55,20 +113,28 @@ export class MediaService {
   }
 
   async remove(id: string, owner: { tenantId?: string; userId: string; isSuperAdmin?: boolean }) {
-    const media = await this.prisma.mediaFile.findUnique({ where: { id }, select: { id: true, tenantId: true, userId: true } });
+    const media = await this.prisma.mediaFile.findUnique({
+      where: { id },
+      select: { id: true, tenantId: true, userId: true, storagePath: true },
+    });
     if (!media) return { ok: true };
     const allowed =
       owner.isSuperAdmin ||
       (media.tenantId && media.tenantId === owner.tenantId) ||
       (!media.tenantId && media.userId === owner.userId);
     if (!allowed) throw new NotFoundException('Imagem não encontrada');
+
+    // Remove do Supabase Storage
+    await this.supabase.storage.from(this.bucket).remove([media.storagePath]);
+
     await this.prisma.mediaFile.delete({ where: { id } });
     return { ok: true };
   }
 
-  /** URL pública absoluta da imagem (a API fica em outro host do site, então precisa ser absoluta) */
-  publicUrl(id: string, req: { protocol: string; get(name: string): string | undefined }) {
-    const base = (process.env.API_PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-    return `${base}/api/media/${id}`;
+  /** URL pública da imagem (redireciona para Supabase Storage) */
+  publicUrl(id: string, _req?: unknown): string {
+    // O id agora resolve para a URL do Supabase Storage
+    // Esta função mantém compatibilidade com o controller
+    return `/api/media/${id}`;
   }
 }

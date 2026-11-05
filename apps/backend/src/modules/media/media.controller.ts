@@ -17,30 +17,19 @@ export class MediaController {
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } }))
-  async upload(@UploadedFile() file: UploadedImage | undefined, @CurrentUser() user: AuthUser, @Req() req: Request) {
+  async upload(@UploadedFile() file: UploadedImage | undefined, @CurrentUser() user: AuthUser) {
     const media = await this.media.upload(file, { tenantId: user.tenantId, userId: user.sub });
-    return { id: media.id, url: this.media.publicUrl(media.id, req), mime: media.mime, size: media.size };
+    return { id: media.id, url: media.publicUrl, mime: media.mime, size: media.size };
   }
 
-  /** Imagem pública (site, app e painel). Cache longo: o conteúdo de um id nunca muda. */
+  /** Redireciona para a URL pública no Supabase Storage. Cache longo: o conteúdo de um id nunca muda. */
   @Public()
   @Get(':id')
-  async get(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+  async get(@Param('id') id: string, @Res() res: Response) {
     const media = await this.media.get(id);
-    const etag = `"${media.id}"`;
-    // proxies (Cloudflare) devolvem o ETag fraco: W/"id"
-    const inm = String(req.headers['if-none-match'] ?? '').replace(/^W\//, '');
-    if (inm === etag) {
-      res.status(304).end();
-      return;
-    }
-    res.setHeader('Content-Type', media.mime);
-    res.setHeader('Content-Length', String(media.size));
+    // Redireciona permanentemente para a URL do Supabase Storage
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.setHeader('ETag', etag);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    // não devolve o Response: o interceptor global serializa o retorno e entraria em ciclo (req <-> res)
-    res.end(media.data);
+    res.redirect(301, media.publicUrl);
   }
 
   @ApiBearerAuth()

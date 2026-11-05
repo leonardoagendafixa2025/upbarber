@@ -1,11 +1,12 @@
--- Imagens enviadas pelo painel (logo, capa, galeria, avatares)
+-- Imagens enviadas pelo painel (logo, capa, galeria, avatares) - Supabase Storage
 CREATE TABLE "media_files" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT,
     "userId" TEXT,
     "mime" TEXT NOT NULL,
     "size" INTEGER NOT NULL,
-    "data" BYTEA NOT NULL,
+    "storagePath" TEXT NOT NULL,
+    "publicUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "media_files_pkey" PRIMARY KEY ("id")
