@@ -591,9 +591,9 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b bg-gray-950 text-white">
-        <div className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex min-h-[5.5rem] max-w-4xl items-center gap-4 px-4 py-3 sm:px-6">
           <Link to="/app" className="flex items-center">
-            <img src="/logo.png?v=2" alt="UP BARBER" className="h-10 w-auto object-contain rounded-lg" />
+            <img src="/logo.png?v=3" alt="UP BARBER" className="h-20 w-auto object-contain drop-shadow" />
           </Link>
           <span className="hidden text-sm text-gray-400 sm:inline">· Configuração inicial</span>
           <Button variant="ghost" size="sm" className="ml-auto text-gray-300 hover:bg-white/10 hover:text-white" asChild>

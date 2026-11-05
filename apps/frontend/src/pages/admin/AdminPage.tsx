@@ -611,11 +611,11 @@ export default function AdminPage() {
   ];
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-30 bg-gray-950 text-white">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
-          <Link to="/admin" className="flex items-center gap-2 font-bold">
-            <img src="/logo.png?v=2" alt="UP BARBER" className="h-10 w-auto object-contain rounded-lg" />
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-300">Admin</span>
+      <header className="sticky top-0 z-30 bg-gray-950 text-white shadow-lg">
+        <div className="mx-auto flex min-h-[6.5rem] max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
+          <Link to="/admin" className="flex items-center gap-3 font-bold">
+            <img src="/logo.png?v=3" alt="UP BARBER" className="h-24 sm:h-28 w-auto object-contain drop-shadow-md" />
+            <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-gold-300">Admin</span>
           </Link>
           <nav className="flex items-center gap-1">
             {nav.map((n) => (

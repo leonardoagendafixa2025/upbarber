@@ -111,11 +111,11 @@ export default function AppShell() {
 
   const Sidebar = (
     <div className="flex h-full flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
-      <div className="flex h-16 items-center gap-2 px-5">
-        <Link to="/app" className="flex items-center">
-          <img src="/logo.png?v=2" alt="UP BARBER" className="h-12 w-auto object-contain rounded-xl" />
+      <div className="relative flex flex-col items-center justify-center border-b border-white/10 px-4 py-5">
+        <Link to="/app" className="flex items-center justify-center">
+          <img src="/logo.png?v=3" alt="UP BARBER" className="h-44 w-auto max-w-[210px] object-contain drop-shadow-md" />
         </Link>
-        <button className="ml-auto lg:hidden" onClick={() => setOpen(false)}>
+        <button className="absolute right-3 top-3 text-white/70 hover:text-white lg:hidden" onClick={() => setOpen(false)}>
           <X className="h-5 w-5" />
         </button>
       </div>
