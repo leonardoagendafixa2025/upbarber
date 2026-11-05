@@ -1,3 +1,16 @@
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Carrega .env do disco ou do Secret Files do Render (/etc/secrets/.env)
+if (fs.existsSync('/etc/secrets/.env')) {
+  dotenv.config({ path: '/etc/secrets/.env' });
+} else if (fs.existsSync(path.resolve(process.cwd(), '.env'))) {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+} else {
+  dotenv.config();
+}
+
 import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
