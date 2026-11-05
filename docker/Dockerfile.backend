@@ -1,0 +1,49 @@
+# ---------- Build stage ----------
+FROM node:20-bookworm-slim AS builder
+
+# Coolify passes NODE_ENV=production as a build arg; the build needs dev deps (nest/prisma cli)
+ENV NODE_ENV=development
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Root + backend manifests (npm workspaces)
+COPY package.json package-lock.json turbo.json ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages ./packages/
+
+# Install only the backend workspace deps (dev deps included: nest cli + prisma cli)
+RUN npm ci --workspace=@connect-barber/backend --include=dev --no-audit --no-fund
+
+# Backend source
+COPY apps/backend ./apps/backend/
+
+# Prisma Client + Nest build
+RUN cd apps/backend && npx prisma generate && npm run build
+
+# ---------- Runtime stage ----------
+FROM node:20-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/backend ./apps/backend
+
+WORKDIR /app/apps/backend
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+
+# Apply pending migrations, then start the API
+CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/seed.ts && node dist/main"]
