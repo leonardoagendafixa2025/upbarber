@@ -2,13 +2,34 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Carrega .env do disco ou do Secret Files do Render (/etc/secrets/.env)
-if (fs.existsSync('/etc/secrets/.env')) {
-  dotenv.config({ path: '/etc/secrets/.env' });
-} else if (fs.existsSync(path.resolve(process.cwd(), '.env'))) {
+// 1. Carrega todas as variáveis salvas em /etc/secrets (suporta Secret Files do Render)
+if (fs.existsSync('/etc/secrets')) {
+  try {
+    const files = fs.readdirSync('/etc/secrets');
+    for (const file of files) {
+      const fullPath = path.join('/etc/secrets', file);
+      if (fs.statSync(fullPath).isFile()) {
+        const val = fs.readFileSync(fullPath, 'utf8').trim();
+        if (file === '.env') {
+          dotenv.config({ path: fullPath });
+        } else if (!process.env[file]) {
+          process.env[file] = val;
+        }
+      }
+    }
+  } catch (err) {}
+}
+
+// 2. Carrega .env do diretório atual se existir
+if (fs.existsSync(path.resolve(process.cwd(), '.env'))) {
   dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 } else {
   dotenv.config();
+}
+
+// Garante que DIRECT_URL não fique nula caso DATABASE_URL exista
+if (process.env.DATABASE_URL && !process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
 }
 
 import { NestFactory, Reflector } from '@nestjs/core';
