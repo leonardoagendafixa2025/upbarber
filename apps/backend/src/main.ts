@@ -76,7 +76,7 @@ async function bootstrap() {
   app.useGlobalGuards(new JwtAuthGuard(reflector), new RolesGuard(reflector));
 
   const config = new DocumentBuilder()
-    .setTitle('Connect Barber API')
+    .setTitle('UP BARBER API')
     .setDescription('Sistema de gestão para barbearias: agenda online, comandas, caixa, estoque, comissões, fidelidade e comunicação.')
     .setVersion('1.0')
     .addBearerAuth()

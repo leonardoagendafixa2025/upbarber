@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, CalendarRange, Check, MousePointerClick, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { CTA, FEATURES, FeatureDef, Personas } from '@/components/site/sections';
@@ -22,7 +22,7 @@ const EXTRA: FeatureDef[] = [
     short: 'O sistema evita conflitos, respeita duração dos serviços e intervalos.',
     icon: ShieldCheck,
     color: 'bg-violet-100 text-violet-700',
-    paragraphs: ['Nada de horário duplicado ou cliente esperando. O Connect Barber calcula a duração de cada serviço, respeita bloqueios, folgas e antecedência mínima, e confirma automaticamente quando você quiser.'],
+    paragraphs: ['Nada de horário duplicado ou cliente esperando. O UP BARBER calcula a duração de cada serviço, respeita bloqueios, folgas e antecedência mínima, e confirma automaticamente quando você quiser.'],
     bullets: ['Bloqueio de horários e folgas por data', 'Confirmação automática ou manual', 'Política de cancelamento com limite de horas', 'Encaixes feitos pela recepção'],
   },
   {
@@ -83,7 +83,7 @@ export default function FeaturesPage() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">Funcionalidades</span>
           <h1 className="mt-3 text-4xl font-extrabold sm:text-5xl">Tudo para a gestão da sua barbearia</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-300">Da agenda on-line ao fechamento das comissões: conheça as ferramentas do Connect Barber. Todas incluídas em todos os planos.</p>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-300">Da agenda on-line ao fechamento das comissões: conheça as ferramentas do UP BARBER. Todas incluídas em todos os planos.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-2">
             {list.map((f) => (
               <a key={f.key} href={`#${f.key}`} className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-300 hover:bg-white/10 hover:text-white">

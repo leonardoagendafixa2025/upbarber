@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ClientLayout from '@/components/client/ClientLayout';
 import AppointmentsView from '@/components/client/AppointmentsView';
@@ -8,7 +8,7 @@ import ProfileView from '@/components/client/ProfileView';
 
 export default function ClientAreaPage() {
   useEffect(() => {
-    document.title = 'Minha área · Connect Barber';
+    document.title = 'Minha área · UP BARBER';
   }, []);
 
   return (

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarCheck, CheckCircle2, ClipboardList, Clock, Globe, HeartHandshake, MonitorSmartphone, Rocket, Scissors, TrendingUp, UserPlus, Wallet } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { PricingTable } from '@/components/site/PricingTable';
@@ -106,10 +106,10 @@ export default function HomePage() {
       <section className="py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="text-sm font-semibold uppercase tracking-wider text-primary">Sobre o Connect Barber</span>
+            <span className="text-sm font-semibold uppercase tracking-wider text-primary">Sobre o UP BARBER</span>
             <h2 className="mt-2 text-3xl font-bold sm:text-4xl">Tudo o que sua barbearia precisa, do agendamento ao caixa</h2>
             <p className="mt-4 text-muted-foreground">
-              O Connect Barber é formado por duas partes que trabalham juntas: o módulo de gestão para você e sua equipe e o site da barbearia, onde seus clientes agendam e acompanham tudo.
+              O UP BARBER é formado por duas partes que trabalham juntas: o módulo de gestão para você e sua equipe e o site da barbearia, onde seus clientes agendam e acompanham tudo.
             </p>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-2">

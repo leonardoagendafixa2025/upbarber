@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarPlus, Crown, Gift, Package, Store, XCircle } from 'lucide-react';
 import { Badge, Button, EmptyState, Skeleton } from '@/components/ui';
@@ -40,7 +40,7 @@ export default function BarbershopsView() {
         <p className="text-sm text-muted-foreground">Pontos de fidelidade, pacotes e clubes em cada barbearia.</p>
       </div>
       {data.length === 0 ? (
-        <EmptyState icon={Store} className="bg-white" title="Nenhuma barbearia vinculada" description="Quando você agendar em uma barbearia do Connect Barber com este e-mail ou telefone, ela aparecerá aqui." />
+        <EmptyState icon={Store} className="bg-white" title="Nenhuma barbearia vinculada" description="Quando você agendar em uma barbearia do UP BARBER com este e-mail ou telefone, ela aparecerá aqui." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {data.map((b) => {

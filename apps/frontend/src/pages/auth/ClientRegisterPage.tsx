@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+﻿import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,7 +37,7 @@ export default function ClientRegisterPage() {
   return (
     <AuthLayout
       title="Criar conta de cliente"
-      subtitle="Gratuito. Use para agendar em qualquer barbearia Connect Barber."
+      subtitle="Gratuito. Use para agendar em qualquer barbearia UP BARBER."
       sideTitle="Seu horário na barbearia, na palma da mão"
       sideText="Cadastre-se uma vez e agende sempre que quiser, sem precisar ligar ou mandar mensagem."
       benefits={CLIENT_BENEFITS}

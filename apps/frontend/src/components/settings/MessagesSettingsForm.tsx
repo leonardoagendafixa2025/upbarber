@@ -14,7 +14,7 @@ export const DEFAULT_TEMPLATES = {
 export const DEFAULT_BIRTHDAY = 'Feliz aniversário, {{cliente}}! 🎉 A {{barbearia}} deseja um dia incrível. Passe aqui para comemorar com um visual novo: {{link}}';
 
 const VARS = ['cliente', 'barbearia', 'data', 'hora', 'profissional', 'servicos', 'link'];
-const SAMPLE: Record<string, string> = { cliente: 'João', barbearia: 'Sua Barbearia', data: '25/10', hora: '14:30', profissional: 'Carlos', servicos: 'Corte + Barba', link: 'connectbarber.com.br/b/sua-barbearia' };
+const SAMPLE: Record<string, string> = { cliente: 'João', barbearia: 'Sua Barbearia', data: '25/10', hora: '14:30', profissional: 'Carlos', servicos: 'Corte + Barba', link: 'upbarber.com.br/b/sua-barbearia' };
 const render = (t: string, barbearia: string) => t.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (k === 'barbearia' ? barbearia : SAMPLE[k] ?? `{{${k}}}`));
 
 const schema = z.object({

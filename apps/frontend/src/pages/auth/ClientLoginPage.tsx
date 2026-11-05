@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+﻿import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,7 +37,7 @@ export default function ClientLoginPage() {
       title="Área do cliente"
       subtitle="Entre para agendar e acompanhar seus horários."
       sideTitle="Seu horário na barbearia, na palma da mão"
-      sideText="Agende, remarque e acompanhe seus atendimentos e pontos de fidelidade nas barbearias que usam o Connect Barber."
+      sideText="Agende, remarque e acompanhe seus atendimentos e pontos de fidelidade nas barbearias que usam o UP BARBER."
       benefits={CLIENT_BENEFITS}
       footer={
         <div className="space-y-2">

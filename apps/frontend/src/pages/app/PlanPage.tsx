@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -74,7 +74,7 @@ export default function PlanPage() {
 
   return (
     <div>
-      <PageHeader title="Meu plano" description="Assinatura do Connect Barber, faturas e pagamentos." />
+      <PageHeader title="Meu plano" description="Assinatura do UP BARBER, faturas e pagamentos." />
 
       {invoiceParam && (
         <div className={cn('mb-6 flex items-start gap-3 rounded-xl border p-4', returnedInvoice?.status === 'PAID' ? 'border-emerald-200 bg-emerald-50' : 'border-sky-200 bg-sky-50')}>

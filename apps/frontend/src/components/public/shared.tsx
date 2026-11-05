@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+﻿import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { WEEKDAYS } from '@/lib/utils/format';
 import type { PublicBarbershop, PublicProfessional, PublicService, TimeRange } from '@/lib/api/public';
@@ -112,7 +112,7 @@ export function PoweredBy({ className }: { className?: string }) {
     <p className={cn('text-center text-xs text-muted-foreground', className)}>
       Site criado com{' '}
       <a href="/" className="font-semibold text-gold-600 hover:underline">
-        Connect Barber
+        UP BARBER
       </a>
     </p>
   );

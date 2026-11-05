@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell,
@@ -129,7 +129,7 @@ export const FEATURES: FeatureDef[] = [
     short: 'Mensagem automática no dia e lista do mês para criar promoções especiais.',
     icon: Cake,
     color: 'bg-pink-100 text-pink-700',
-    paragraphs: ['Quem não gosta de ser lembrado no aniversário? O Connect Barber avisa quem faz aniversário no dia e no mês e pode enviar automaticamente uma mensagem com sua promoção.'],
+    paragraphs: ['Quem não gosta de ser lembrado no aniversário? O UP BARBER avisa quem faz aniversário no dia e no mês e pode enviar automaticamente uma mensagem com sua promoção.'],
   },
   {
     key: 'lista-espera',
@@ -237,7 +237,7 @@ export function Personas() {
   return (
     <section className="bg-muted/50 py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <h2 className="text-center text-3xl font-bold">Como você vai usar o Connect Barber?</h2>
+        <h2 className="text-center text-3xl font-bold">Como você vai usar o UP BARBER?</h2>
         <p className="mt-2 text-center text-muted-foreground">Escolha a opção que melhor descreve você.</p>
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {items.map((p) => (
@@ -259,7 +259,7 @@ export function Personas() {
 }
 
 export const FAQ_ITEMS = [
-  { q: 'Não possuo CNPJ. Posso utilizar o Connect Barber?', a: 'Sim. O Connect Barber pode ser utilizado tanto por pessoa jurídica quanto por pessoa física.' },
+  { q: 'Não possuo CNPJ. Posso utilizar o UP BARBER?', a: 'Sim. O UP BARBER pode ser utilizado tanto por pessoa jurídica quanto por pessoa física.' },
   { q: 'O período gratuito tem alguma limitação de funcionalidades?', a: 'Não. Durante os 30 dias de teste você usa o sistema completo, com todas as funcionalidades e sem limite de profissionais.' },
   { q: 'Meus profissionais têm acesso ao sistema?', a: 'Sim. Cada profissional pode ter o próprio login para ver a agenda e as comissões, com permissões definidas pelo gestor (dono, gestor, recepção ou profissional).' },
   { q: 'Posso alterar meu plano futuramente?', a: 'Sim. O plano depende do número de profissionais ativos. Você pode fazer upgrade ou downgrade a cada vencimento da fatura mensal.' },

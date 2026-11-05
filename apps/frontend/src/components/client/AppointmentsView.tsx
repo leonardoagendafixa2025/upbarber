@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -82,7 +82,7 @@ export default function AppointmentsView() {
         action={
           <Button asChild variant="outline">
             <Link to="/">
-              <Search /> Conhecer o Connect Barber
+              <Search /> Conhecer o UP BARBER
             </Link>
           </Button>
         }

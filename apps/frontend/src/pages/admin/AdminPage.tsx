@@ -32,7 +32,7 @@ function Overview() {
   const total = data.byStatus.reduce((s, b) => s + b.count, 0) || 1;
   return (
     <div>
-      <PageHeader title="Visão geral da plataforma" description="Indicadores de todas as barbearias do Connect Barber." />
+      <PageHeader title="Visão geral da plataforma" description="Indicadores de todas as barbearias do UP BARBER." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Barbearias" value={num(data.tenants)} icon={Building2} />
         <StatCard label="Usuários" value={num(data.users)} icon={Users} />
@@ -614,7 +614,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-30 bg-gray-950 text-white">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
           <Link to="/admin" className="flex items-center gap-2 font-bold">
-            <img src="/logo.png?v=20261018" alt="Connect Barber" className="h-10 w-10 rounded-lg bg-white p-1" />
+            <img src="/logo.png?v=2" alt="UP BARBER" className="h-10 w-auto object-contain rounded-lg" />
             <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-300">Admin</span>
           </Link>
           <nav className="flex items-center gap-1">

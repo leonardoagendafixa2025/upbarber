@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Store } from 'lucide-react';
@@ -22,7 +22,7 @@ export default function BarbershopPage() {
   useEffect(() => {
     if (shop?.name) document.title = sub === 'agendar' ? `Agendar · ${shop.name}` : shop.name;
     return () => {
-      document.title = 'Connect Barber';
+      document.title = 'UP BARBER';
     };
   }, [shop?.name, sub]);
 
@@ -39,7 +39,7 @@ export default function BarbershopPage() {
           description={notFound ? 'Confira o endereço digitado. O site pode ter sido desativado.' : 'Verifique sua conexão e tente novamente.'}
           action={
             <Button asChild variant="outline">
-              <Link to="/">Ir para o Connect Barber</Link>
+              <Link to="/">Ir para o UP BARBER</Link>
             </Button>
           }
         />

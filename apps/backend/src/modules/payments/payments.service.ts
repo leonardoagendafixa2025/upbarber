@@ -36,7 +36,7 @@ export class PaymentsService {
 
   customerEmail(client: { email?: string | null; phone?: string | null; id: string }) {
     if (client.email) return client.email;
-    const domain = this.config.get<string>('CUSTOMER_EMAIL_DOMAIN') || 'clientes.connectbarber.app';
+    const domain = this.config.get<string>('CUSTOMER_EMAIL_DOMAIN') || 'clientes.upbarber.app';
     return `${client.phone || client.id}@${domain}`;
   }
 

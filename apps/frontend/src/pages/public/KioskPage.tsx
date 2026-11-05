@@ -121,7 +121,7 @@ export default function KioskPage() {
       {/* topo */}
       <header className="flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-3">
-          <img src="/logo.png?v=20261018" alt="Connect Barber" className="h-12 w-12 rounded-xl bg-white object-contain p-1" />
+          <img src="/logo.png?v=2" alt="UP BARBER" className="h-12 w-auto rounded-xl object-contain" />
           <div>
             <div className="text-lg font-bold leading-tight">{c.name}</div>
             <div className="text-xs text-white/60">Autoatendimento</div>
@@ -229,7 +229,7 @@ export default function KioskPage() {
           </div>
         )}
       </main>
-      <footer className="pb-4 text-center text-xs text-white/40">Totem Connect Barber</footer>
+      <footer className="pb-4 text-center text-xs text-white/40">Totem UP BARBER</footer>
     </div>
   );
 }

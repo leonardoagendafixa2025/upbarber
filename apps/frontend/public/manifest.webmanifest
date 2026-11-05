@@ -1,8 +1,8 @@
 {
   "id": "/totem-app",
-  "name": "Connect Barber Totem",
-  "short_name": "Totem Barber",
-  "description": "Totem de autoatendimento Connect Barber",
+  "name": "UP BARBER Totem",
+  "short_name": "UP BARBER",
+  "description": "Totem de autoatendimento UP BARBER",
   "start_url": "/totem-app",
   "scope": "/",
   "display": "standalone",
@@ -10,6 +10,6 @@
   "background_color": "#17221c",
   "theme_color": "#17221c",
   "icons": [
-    { "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

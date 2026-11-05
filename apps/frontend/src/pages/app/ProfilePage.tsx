@@ -1,4 +1,4 @@
-import { Controller, useForm } from 'react-hook-form';
+﻿import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -63,7 +63,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Meu perfil" description="Seus dados de acesso ao Connect Barber." />
+      <PageHeader title="Meu perfil" description="Seus dados de acesso ao UP BARBER." />
 
       <div className="mb-6 flex items-center gap-4 rounded-xl border bg-card p-5">
         <Avatar src={/^https?:\/\//i.test(avatarPreview) ? avatarPreview : null} name={namePreview || user?.name} size="xl" color="#d97706" />
