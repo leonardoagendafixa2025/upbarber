@@ -109,12 +109,11 @@ export default function SiteLayout() {
           <div>
             <div className="mb-3 text-sm font-semibold text-white">Contato</div>
             <ul className="space-y-2 text-sm">
-              <li>contato@creativenext.dev</li>
               <li>Suporte via WhatsApp</li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">© {new Date().getFullYear()} UP BARBER · Creative Labs. Todos os direitos reservados.</div>
+        <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">© {new Date().getFullYear()} UP BARBER. Todos os direitos reservados.</div>
       </footer>
     </div>
   );
