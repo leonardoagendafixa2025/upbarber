@@ -5,7 +5,7 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Loader2, Lock, Plus, RefreshCw, RotateCcw } from 'lucide-react';
-import { Button, ConfirmDialog, Input, PageHeader, Select, Skeleton, Switch, Tabs, TabsList, TabsTrigger } from '@/components/ui';
+import { Button, ConfirmDialog, Input, PageHeader, Select, Skeleton, Switch } from '@/components/ui';
 import { appointmentsApi, catalogApi, type AgendaAppointment, type AgendaBlock, type AgendaData } from '@/lib/api/appointments';
 import { errorMessage } from '@/lib/api/client';
 import { fromISODate, toISODate } from '@/lib/utils/format';
@@ -119,10 +119,24 @@ export default function AgendaPage() {
   const appointments = useMemo(() => {
     return rawAppointments.filter((a) => {
       if (!showCancelled && a.status === 'CANCELLED') return false;
-      if (statusFilter && a.status !== statusFilter) return false;
       return true;
     });
-  }, [rawAppointments, showCancelled, statusFilter]);
+  }, [rawAppointments, showCancelled]);
+
+  const totalCount = appointments.length;
+  const filteredCount = useMemo(() => {
+    return appointments.filter((a) => {
+      if (statusFilter && a.status !== statusFilter) return false;
+      if (professionalId && a.professionalId !== professionalId) return false;
+      return true;
+    }).length;
+  }, [appointments, statusFilter, professionalId]);
+
+  const isCardDimmed = (a: AgendaAppointment) => {
+    if (statusFilter && a.status !== statusFilter) return true;
+    if (professionalId && a.professionalId !== professionalId) return true;
+    return false;
+  };
 
   const blocks = data?.blocks ?? [];
   const today = nowZoned.date;
@@ -232,21 +246,65 @@ export default function AgendaPage() {
   const [detail, setDetail] = useState<AgendaAppointment | null>(null);
   const [blockForm, setBlockForm] = useState<{ open: boolean; date: string; start?: string; professionalId?: string }>({ open: false, date });
   const [blockToRemove, setBlockToRemove] = useState<AgendaBlock | null>(null);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Atalho de teclado 'N' para novo agendamento
+  const step = view === 'day' ? 1 : 7;
+  const go = (n: number) => setParam({ date: toISODate(addDays(fromISODate(date), n * step)) });
+
+  // Atalhos de Teclado Globais (Fase 5: N novo, T hoje, ← → dia anterior/próximo, D/S/L visão, / busca, Esc fecha)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        if (e.key === 'Escape') {
+          (e.target as HTMLElement).blur();
+        }
         return;
       }
+
       if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
-        setForm({ open: true, appointment: null, initial: { date, professionalId: professionalId || undefined } });
+        openNew();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        setParam({ date: toISODate(new Date()) });
+        toast.info('Navegado para Hoje');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        go(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        go(1);
+      } else if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        setView('day');
+        setParam({ view: 'day' });
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        setView('week');
+        setParam({ view: 'week' });
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        setView('list');
+        setParam({ view: 'list' });
+      } else if (e.key === '/') {
+        e.preventDefault();
+        const sel = document.querySelector('select');
+        sel?.focus();
+      } else if (e.key === 'Escape') {
+        setDetail(null);
+        setForm((f) => ({ ...f, open: false }));
+        setBlockForm((b) => ({ ...b, open: false }));
+        setBlockToRemove(null);
+        setMobileDrawerOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [date, professionalId]);
+  }, [date, professionalId, step]);
 
   // mantém o detalhe atualizado após refetch
   useEffect(() => {
@@ -284,9 +342,6 @@ export default function AgendaPage() {
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
-
-  const step = view === 'day' ? 1 : 7;
-  const go = (n: number) => setParam({ date: toISODate(addDays(fromISODate(date), n * step)) });
 
   const openNew = (d = date, time?: string, proId?: string, duration?: number) =>
     setForm({ open: true, appointment: null, initial: { date: d, time, professionalId: proId || professionalId || weekPro?.id || undefined, duration } });
@@ -596,35 +651,80 @@ export default function AgendaPage() {
             </Select>
           )}
 
-          <Select
-            value={statusFilter}
-            onChange={(e) => setParam({ status: e.target.value || null })}
-            className="w-36 border-white/10 bg-[#141419] text-white"
-          >
-            <option value="">•••• Status</option>
-            <option value="SCHEDULED">Marcado</option>
-            <option value="CONFIRMED">Confirmado</option>
-            <option value="IN_PROGRESS">Em atendimento</option>
-            <option value="COMPLETED">Finalizado</option>
-          </Select>
+          <div className="flex items-center gap-1.5">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setParam({ status: e.target.value || null })}
+              className="w-36 border-white/10 bg-[#141419] text-white"
+            >
+              <option value="">•••• Status</option>
+              <option value="SCHEDULED">Marcado</option>
+              <option value="CONFIRMED">Confirmado</option>
+              <option value="IN_PROGRESS">Em atendimento</option>
+              <option value="COMPLETED">Finalizado</option>
+            </Select>
+
+            {(statusFilter || professionalId) && (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-300 shadow-sm animate-in fade-in duration-200">
+                {filteredCount} de {totalCount}
+              </span>
+            )}
+          </div>
 
           <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
             <Switch checked={showCancelled} onCheckedChange={setShowCancelled} /> Cancelados
           </label>
 
-          <Tabs
-            value={view}
-            onValueChange={(v) => {
-              setView(v as View);
-              setParam({ view: v });
-            }}
-          >
-            <TabsList className="bg-[#141419] border border-white/10 p-0.5">
-              <TabsTrigger value="day" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Dia</TabsTrigger>
-              <TabsTrigger value="week" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Semana</TabsTrigger>
-              <TabsTrigger value="list" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Lista</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* Segmented Control com Indicador Deslizante (Fase 5) */}
+          <div className="relative inline-flex items-center rounded-xl border border-white/10 bg-[#121217] p-1 shadow-inner">
+            <span
+              className={cn(
+                'absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-[#c9a227] to-[#e4bc41] shadow-lg shadow-amber-500/20 transition-all duration-300 ease-out',
+                view === 'day' && 'left-1 w-[56px]',
+                view === 'week' && 'left-[60px] w-[74px]',
+                view === 'list' && 'left-[138px] w-[58px]',
+              )}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setView('day');
+                setParam({ view: 'day' });
+              }}
+              className={cn(
+                'relative z-10 w-[56px] py-1 text-center text-xs font-bold transition-colors duration-200',
+                view === 'day' ? 'text-black font-extrabold' : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              Dia
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setView('week');
+                setParam({ view: 'week' });
+              }}
+              className={cn(
+                'relative z-10 w-[74px] py-1 text-center text-xs font-bold transition-colors duration-200',
+                view === 'week' ? 'text-black font-extrabold' : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              Semana
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setView('list');
+                setParam({ view: 'list' });
+              }}
+              className={cn(
+                'relative z-10 w-[58px] py-1 text-center text-xs font-bold transition-colors duration-200',
+                view === 'list' ? 'text-black font-extrabold' : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              Lista
+            </button>
+          </div>
         </div>
       </div>
 
@@ -635,6 +735,24 @@ export default function AgendaPage() {
         timezone={tz}
         nowMinutes={nowMinutes}
       />
+
+      {/* Botão flutuante para tablet / mobile abrir o painel lateral (Fase 5) */}
+      {view === 'day' && !agendaQ.isLoading && !agendaQ.isError && columns.length > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0d0d12]/90 p-3 shadow-lg lg:hidden">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-xs font-semibold text-zinc-200">Painel do Dia (Agora · Próximos · Atenção)</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setMobileDrawerOpen(true)}
+            className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold"
+          >
+            Abrir painel
+          </Button>
+        </div>
+      )}
 
       {/* 4. ÁREA PRINCIPAL: GRADE + SIDEBAR */}
       {agendaQ.isLoading ? (
@@ -680,22 +798,53 @@ export default function AgendaPage() {
               onBlockClick={setBlockToRemove}
               onAppointmentMove={handleAppointmentMove}
               onAppointmentResize={handleAppointmentResize}
+              isDimmed={isCardDimmed}
             />
           </div>
 
           {view === 'day' && (
+            <div className="hidden lg:block">
+              <AgendaSidebar
+                appointments={appointments}
+                professionals={allPros}
+                timezone={tz}
+                nowMinutes={nowMinutes}
+                nowTimeStr={nowTimeStr}
+                onAppointmentClick={setDetail}
+                onWhatsAppCall={(name) => toast.info(`Iniciando contato com ${name}...`)}
+                onStatusChange={handleQuickStatusChange}
+                onAcceptFitIn={handleAcceptFitIn}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Gaveta lateral (Drawer) em Tablet e Mobile (Fase 5) */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-sm lg:hidden animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm h-full bg-[#0d0d12] border-l border-white/10 p-4 overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+              <span className="text-sm font-bold text-white uppercase tracking-wider">Painel do Dia</span>
+              <Button size="sm" variant="ghost" onClick={() => setMobileDrawerOpen(false)} className="text-zinc-400 hover:text-white">
+                ✕ Fechar
+              </Button>
+            </div>
             <AgendaSidebar
               appointments={appointments}
               professionals={allPros}
               timezone={tz}
               nowMinutes={nowMinutes}
               nowTimeStr={nowTimeStr}
-              onAppointmentClick={setDetail}
+              onAppointmentClick={(a) => {
+                setDetail(a);
+                setMobileDrawerOpen(false);
+              }}
               onWhatsAppCall={(name) => toast.info(`Iniciando contato com ${name}...`)}
               onStatusChange={handleQuickStatusChange}
               onAcceptFitIn={handleAcceptFitIn}
             />
-          )}
+          </div>
         </div>
       )}
 

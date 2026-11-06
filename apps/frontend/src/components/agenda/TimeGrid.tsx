@@ -129,6 +129,7 @@ export function TimeGrid({
   onBlockClick,
   onAppointmentMove,
   onAppointmentResize,
+  isDimmed,
 }: {
   columns: GridColumn[];
   appointments: AgendaAppointment[];
@@ -141,6 +142,7 @@ export function TimeGrid({
   onBlockClick: (b: AgendaBlock) => void;
   onAppointmentMove?: (appt: AgendaAppointment, newDate: string, newTime: string, newProId: string) => void;
   onAppointmentResize?: (appt: AgendaAppointment, newDurationMinutes: number) => void;
+  isDimmed?: (a: AgendaAppointment) => boolean;
 }) {
   const step = Math.max(5, interval || 15);
   const rowH = step <= 10 ? 32 : step <= 15 ? 44 : step <= 30 ? 68 : 92;
@@ -855,10 +857,11 @@ export function TimeGrid({
                         onKeyDown={(e) => handleCardKeyDown(e, a, col, start, end)}
                         onPointerDown={(e) => handleCardPointerDown(e, a, col, start, end)}
                         className={cn(
-                          'group absolute z-[6] overflow-hidden rounded-xl border p-2.5 text-left shadow-lg backdrop-blur-md transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing focus:outline-none',
+                          'group absolute z-[6] overflow-hidden rounded-xl border p-2.5 text-left shadow-lg backdrop-blur-md transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing focus:outline-none motion-reduce:transition-none',
                           isKeyboardTarget
                             ? 'ring-2 ring-amber-400 scale-[1.02] shadow-2xl z-40'
                             : 'hover:z-[9] hover:shadow-2xl hover:brightness-110 focus:ring-2 focus:ring-amber-400/60',
+                          isDimmed?.(a) ? 'opacity-25 grayscale brightness-50 contrast-75 hover:opacity-100 hover:grayscale-0' : 'opacity-100',
                           cardBg,
                         )}
                         style={{
