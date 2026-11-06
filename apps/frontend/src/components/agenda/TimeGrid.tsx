@@ -145,8 +145,8 @@ export function TimeGrid({
   const hasInterval = range.start <= intervalStart && range.end >= intervalEnd;
 
   return (
-    <div ref={scrollRef} className="relative max-h-[calc(100vh-14rem)] min-h-[480px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin">
-      <div className="flex min-w-fit">
+    <div ref={scrollRef} className="relative max-h-[calc(100vh-13rem)] min-h-[500px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin">
+      <div className="flex min-w-fit w-full">
         {/* coluna de horas */}
         <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-white/10 bg-[#0d0d12]/95 backdrop-blur-md">
           <div className="sticky top-0 z-30 h-16 border-b border-white/10 bg-[#0d0d12]/95" />

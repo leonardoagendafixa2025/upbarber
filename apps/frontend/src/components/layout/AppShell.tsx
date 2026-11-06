@@ -108,6 +108,7 @@ export default function AppShell() {
   };
 
   const planBadge = current?.tenant.planStatus;
+  const isWideView = location.pathname.startsWith('/app/agenda');
 
   const Sidebar = (
     <div className="flex h-full flex-col bg-[#0d0d12] border-r border-white/10 text-zinc-300">
@@ -262,8 +263,8 @@ export default function AppShell() {
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 bg-[#09090b] p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">
+          <main className={cn('flex-1 bg-[#09090b]', isWideView ? 'p-3 sm:p-4 lg:p-6' : 'p-4 sm:p-6 lg:p-8')}>
+            <div className={cn('mx-auto', isWideView ? 'w-full max-w-[1920px]' : 'max-w-7xl')}>
               <Outlet />
             </div>
           </main>

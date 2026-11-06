@@ -407,7 +407,7 @@ export default function AgendaPage() {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="flex flex-col lg:flex-row gap-4 items-start w-full">
           <div className="flex-1 min-w-0 w-full">
             <TimeGrid
               columns={columns}

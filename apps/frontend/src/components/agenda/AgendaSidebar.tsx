@@ -120,7 +120,7 @@ export function AgendaSidebar({
   }, [appointments, timezone, nowMinutes]);
 
   return (
-    <aside className="w-full flex-col gap-4 lg:flex lg:w-80 shrink-0">
+    <aside className="w-full flex-col gap-4 lg:flex lg:w-80 xl:w-[340px] shrink-0">
       {/* 1. AGORA */}
       <div className="rounded-2xl border border-white/10 bg-[#0d0d12]/90 p-4 shadow-xl backdrop-blur-md">
         <div className="flex items-center justify-between pb-3">
