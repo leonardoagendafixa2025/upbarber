@@ -3,13 +3,13 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieCh
 import { money, num } from '@/lib/utils/format';
 
 /** Paleta categórica (ordem fixa, validada para daltonismo) */
-export const CHART_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+export const CHART_COLORS = ['#f59e0b', '#fbbf24', '#38bdf8', '#34d399', '#a78bfa', '#f472b6', '#fb923c', '#4ade80'];
 /** Cor primária (âmbar) para séries únicas */
 export const PRIMARY = '#f59e0b';
-export const POSITIVE = '#059669';
-export const NEGATIVE = '#dc2626';
-export const AXIS = '#9ca3af';
-export const GRID = '#eef0f3';
+export const POSITIVE = '#10b981';
+export const NEGATIVE = '#ef4444';
+export const AXIS = '#71717a';
+export const GRID = 'rgba(255, 255, 255, 0.07)';
 
 export const colorAt = (i: number) => CHART_COLORS[i % CHART_COLORS.length];
 
@@ -25,14 +25,14 @@ type Fmt = (v: number) => string;
 export function ChartTooltip({ active, payload, label, formatter = money, labelFormatter }: { active?: boolean; payload?: any[]; label?: any; formatter?: Fmt; labelFormatter?: (l: any) => React.ReactNode }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 text-xs shadow-md">
-      {label !== undefined && label !== '' && <div className="mb-1 font-medium text-foreground">{labelFormatter ? labelFormatter(label) : label}</div>}
-      <div className="space-y-0.5">
+    <div className="rounded-xl border border-white/10 bg-[#16161b] px-3.5 py-2.5 text-xs shadow-xl backdrop-blur-md">
+      {label !== undefined && label !== '' && <div className="mb-1.5 font-semibold text-white">{labelFormatter ? labelFormatter(label) : label}</div>}
+      <div className="space-y-1">
         {payload.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.payload?.fill || p.fill }} />
-            <span className="text-muted-foreground">{p.name}</span>
-            <span className="ml-auto pl-3 font-semibold tabular-nums text-foreground">{formatter(Number(p.value))}</span>
+            <span className="text-zinc-400">{p.name}</span>
+            <span className="ml-auto pl-3 font-semibold tabular-nums text-white">{formatter(Number(p.value))}</span>
           </div>
         ))}
       </div>
