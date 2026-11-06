@@ -93,9 +93,9 @@ export function ImageUpload({
   const dim = maxDim ?? (shape === 'wide' ? 1600 : 800);
 
   const box = {
-    square: 'h-20 w-20 rounded-lg',
-    circle: 'h-20 w-20 rounded-full',
-    wide: 'h-20 w-40 rounded-lg',
+    square: 'h-24 w-24 rounded-2xl',
+    circle: 'h-24 w-24 rounded-full',
+    wide: 'h-24 w-44 rounded-2xl',
   }[shape];
 
   const applyLink = () => {
@@ -107,27 +107,49 @@ export function ImageUpload({
   };
 
   return (
-    <div className={cn('space-y-2', className)}>
-      <div className="flex items-center gap-3">
-        <div className={cn('flex shrink-0 items-center justify-center overflow-hidden border bg-muted text-muted-foreground', box)}>
-          {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : placeholder ?? <ImagePlus className="h-6 w-6 opacity-60" />}
+    <div className={cn('space-y-3', className)}>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className={cn('flex shrink-0 items-center justify-center overflow-hidden border border-white/10 bg-[#0d0d12] shadow-inner ring-1 ring-white/5 transition-all', box, value ? 'ring-amber-500/30' : '')}>
+          {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : placeholder ?? <ImagePlus className="h-8 w-8 text-amber-400/60" />}
         </div>
-        <div className="flex min-w-0 flex-wrap gap-2">
-          <UploadButton size="sm" maxDim={dim} disabled={disabled} onUploaded={(urls) => onChange(urls[0])}>
-            <Upload /> {value ? 'Trocar' : 'Enviar imagem'}
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <UploadButton
+            size="sm"
+            maxDim={dim}
+            disabled={disabled}
+            className="border-amber-500/30 bg-amber-500/10 font-medium text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/60"
+            onUploaded={(urls) => onChange(urls[0])}
+          >
+            <Upload className="h-4 w-4" /> {value ? 'Trocar imagem' : 'Enviar imagem'}
           </UploadButton>
-          <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => setLinkMode((v) => !v)} aria-label="Usar link">
-            <Link2 /> Link
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            className="border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+            onClick={() => setLinkMode((v) => !v)}
+            aria-label="Usar link"
+          >
+            <Link2 className="h-3.5 w-3.5" /> Colar link
           </Button>
           {value && (
-            <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => onChange('')} aria-label="Remover imagem">
-              <Trash2 /> Remover
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              onClick={() => onChange('')}
+              aria-label="Remover imagem"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Remover
             </Button>
           )}
         </div>
       </div>
       {linkMode && (
-        <div className="flex gap-2">
+        <div className="flex max-w-md gap-2">
           <Input
             value={link}
             onChange={(e) => setLink(e.target.value)}
@@ -140,8 +162,13 @@ export function ImageUpload({
               }
             }}
           />
-          <Button type="button" variant="outline" size="sm" onClick={applyLink}>
-            Usar
+          <Button
+            type="button"
+            size="sm"
+            className="border-[#c9a227] bg-[#c9a227] font-semibold text-black hover:bg-[#f0cc66]"
+            onClick={applyLink}
+          >
+            Aplicar
           </Button>
         </div>
       )}
