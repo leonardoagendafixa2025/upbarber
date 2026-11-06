@@ -31,8 +31,9 @@ export default function DashboardPage() {
   const [period, setPeriod] = usePeriod('month');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['reports', 'dashboard', period.from, period.to],
+    queryKey: ['reports', 'dashboard', current?.tenantId, period.from, period.to],
     queryFn: () => reportsApi.dashboard({ from: period.from, to: period.to }),
+    enabled: Boolean(current?.tenantId),
   });
 
   const k = data?.kpis;

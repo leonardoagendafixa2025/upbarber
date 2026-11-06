@@ -109,13 +109,22 @@ export default function AppShell() {
         if (data?.memberships) {
           useAuthStore.setState({ memberships: data.memberships });
         }
-        if (data?.current && (!current || current.tenantId !== data.current.tenantId || current.tenant.slug === 'barbearia-demo')) {
-          authApi.switchTenant(data.current.tenantId).then(() => {
-            qc.invalidateQueries();
-          }).catch(() => {});
+        if (data?.current) {
+          const currentValid = data.memberships?.some((m) => m.tenantId === current?.tenantId);
+          if (!current || !currentValid || current.tenantId !== data.current.tenantId || current.tenant.slug === 'barbearia-demo') {
+            useAuthStore.setState({ current: data.current });
+            authApi.switchTenant(data.current.tenantId).then(() => {
+              qc.invalidateQueries();
+            }).catch(() => {});
+          }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (err?.response?.status === 401 || err?.response?.status === 404) {
+          clear();
+          navigate('/login');
+        }
+      });
   }, []);
 
   const visible = NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.roles || (role && i.roles.includes(role)) || user?.isSuperAdmin) })).filter((g) => g.items.length);
