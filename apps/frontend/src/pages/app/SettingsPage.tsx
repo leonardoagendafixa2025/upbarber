@@ -24,7 +24,13 @@ const TABS = [
 
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
-  const tab = TABS.some((t) => t.value === params.get('tab')) ? params.get('tab')! : 'dados';
+  const isOAuthCallback = params.has('code') || params.has('state');
+  const activeTabParam = params.get('tab');
+  const tab = isOAuthCallback
+    ? 'online'
+    : TABS.some((t) => t.value === activeTabParam)
+    ? activeTabParam!
+    : 'dados';
   const { data: tenant, isLoading, error, refetch } = useTenant();
 
   const handleSelectTab = (val: string) => {

@@ -80,7 +80,7 @@ export default function PaymentsKioskSettings({ tenant }: { tenant: TenantLike }
 
     if (code && state && !isProcessingOAuth) {
       setIsProcessingOAuth(true);
-      const redirectUri = `${window.location.origin}/app/configuracoes?tab=online`;
+      const redirectUri = `${window.location.origin}/app/configuracoes`;
 
       toast.loading('Finalizando conexão com o Mercado Pago...', { id: 'mp-oauth' });
       paymentsApi
@@ -89,16 +89,19 @@ export default function PaymentsKioskSettings({ tenant }: { tenant: TenantLike }
           toast.success(`Mercado Pago conectado com sucesso! (${res.accountName})`, { id: 'mp-oauth' });
           qc.invalidateQueries({ queryKey: ['payment-connections', tenant.id] });
           qc.invalidateQueries({ queryKey: ['tenant'] });
-          // Limpa os parâmetros da URL
+          // Limpa os parâmetros da URL mantendo na aba online
           params.delete('code');
           params.delete('state');
           params.delete('platform_id');
+          params.set('tab', 'online');
           setParams(params, { replace: true });
         })
         .catch((err) => {
           toast.error(errorMessage(err, 'Falha ao conectar com o Mercado Pago'), { id: 'mp-oauth' });
           params.delete('code');
           params.delete('state');
+          params.delete('platform_id');
+          params.set('tab', 'online');
           setParams(params, { replace: true });
         })
         .finally(() => setIsProcessingOAuth(false));
@@ -108,7 +111,7 @@ export default function PaymentsKioskSettings({ tenant }: { tenant: TenantLike }
   // Iniciar fluxo OAuth
   const startMercadoPagoOAuth = async () => {
     try {
-      const redirectUri = `${window.location.origin}/app/configuracoes?tab=online`;
+      const redirectUri = `${window.location.origin}/app/configuracoes`;
       const { url } = await paymentsApi.getMercadoPagoAuthUrl(redirectUri);
       window.location.href = url;
     } catch (err: any) {
