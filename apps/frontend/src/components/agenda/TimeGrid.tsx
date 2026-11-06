@@ -93,7 +93,8 @@ export function TimeGrid({
   onBlockClick: (b: AgendaBlock) => void;
 }) {
   const step = Math.max(5, interval || 15);
-  const rowH = step <= 10 ? 18 : step <= 15 ? 24 : step <= 30 ? 36 : 56;
+  // Altura confortável por slot para que textos e serviços nunca fiquem espremidos ou cortados
+  const rowH = step <= 10 ? 28 : step <= 15 ? 40 : step <= 30 ? 64 : 84;
   const ppm = rowH / step;
   const rows = useMemo(() => {
     const r: number[] = [];
@@ -149,7 +150,7 @@ export function TimeGrid({
   }, [columns, appointments, blocks, timezone]);
 
   const clampTop = (m: number) => (Math.max(m, range.start) - range.start) * ppm;
-  const clampH = (s: number, e: number) => Math.max(14, (Math.min(e, range.end) - Math.max(s, range.start)) * ppm);
+  const clampH = (s: number, e: number) => Math.max(48, (Math.min(e, range.end) - Math.max(s, range.start)) * ppm);
   const inWorking = (col: GridColumn, m: number) => col.working.some((w) => w.start <= m && m < w.end);
 
   return (
@@ -174,13 +175,13 @@ export function TimeGrid({
         {columns.map((col) => {
           const data = perColumn.get(col.key);
           return (
-            <div key={col.key} className="min-w-[170px] flex-1 border-r border-white/10 last:border-r-0">
+            <div key={col.key} className="min-w-[210px] flex-1 border-r border-white/10 last:border-r-0">
               {/* cabeçalho do profissional / dia */}
               <div
                 className={cn(
                   'sticky top-0 z-10 flex h-16 items-center justify-center border-b px-3 backdrop-blur-md transition-colors',
                   col.isToday
-                    ? 'border-b-2 border-b-amber-500 bg-gradient-to-b from-amber-500/15 to-transparent text-white shadow-sm'
+                    ? 'border-b-2 border-b-amber-500 bg-gradient-to-b from-amber-500/20 via-amber-500/5 to-transparent text-white shadow-sm'
                     : 'border-b-white/10 bg-[#0d0d12]/95 text-white',
                 )}
               >
@@ -198,15 +199,15 @@ export function TimeGrid({
                       onClick={() => onSlotClick(col.date, toHHMM(m), col.professionalId)}
                       className={cn(
                         'group absolute inset-x-0 block border-t text-left transition-colors',
-                        m % 60 === 0 ? 'border-white/10' : 'border-dashed border-white/5',
+                        m % 60 === 0 ? 'border-white/15' : 'border-dashed border-white/5',
                         working
                           ? 'bg-transparent hover:bg-amber-500/10'
-                          : 'bg-black/40 hover:bg-black/60 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.015)_0_8px,transparent_8px_16px)]',
+                          : 'bg-black/50 hover:bg-black/70 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.015)_0_8px,transparent_8px_16px)]',
                       )}
                       style={{ top: i * rowH, height: rowH }}
                       title={`${toHHMM(m)}${working ? '' : ' (fora da jornada)'}`}
                     >
-                      <span className="hidden pl-2 text-[10px] font-semibold text-amber-400 group-hover:inline">
+                      <span className="hidden pl-2 text-[10px] font-bold text-amber-400 group-hover:inline">
                         + {toHHMM(m)}
                       </span>
                     </button>
@@ -224,7 +225,7 @@ export function TimeGrid({
                         e.stopPropagation();
                         onBlockClick(b);
                       }}
-                      className="absolute inset-x-0 z-[5] flex items-start gap-1.5 overflow-hidden border-y border-amber-500/40 bg-[#161208]/90 px-2 py-1 text-left text-xs font-semibold text-amber-200/90 shadow-md backdrop-blur-sm transition-all hover:border-amber-400"
+                      className="absolute inset-x-0 z-[5] flex items-start gap-1.5 overflow-hidden border-y border-amber-500/40 bg-[#161208]/95 px-2.5 py-1.5 text-left text-xs font-semibold text-amber-200 shadow-md backdrop-blur-sm transition-all hover:border-amber-400"
                       style={{ top: clampTop(start), height: clampH(start, end), backgroundImage: HATCH }}
                     >
                       <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
@@ -235,7 +236,7 @@ export function TimeGrid({
                     </button>
                   ))}
 
-                {/* cards de agendamentos */}
+                {/* cards de agendamentos com preenchimento dark glass e alto contraste */}
                 {data?.appts
                   .filter((x) => x.end > range.start && x.start < range.end)
                   .map(({ item: a, start, end, lane, lanes }) => {
@@ -253,7 +254,7 @@ export function TimeGrid({
                             onAppointmentClick(a);
                           }}
                           className={cn(
-                            'absolute z-[6] overflow-hidden rounded-xl border p-1.5 text-left text-[11px] leading-tight shadow-lg transition-all hover:z-[8] hover:shadow-2xl hover:scale-[1.01] backdrop-blur-md',
+                            'absolute z-[6] overflow-hidden rounded-xl border p-2 text-left leading-tight shadow-xl transition-all hover:z-[9] hover:shadow-2xl hover:brightness-110 hover:scale-[1.01] backdrop-blur-md flex flex-col justify-between',
                             faded && 'opacity-50 grayscale',
                           )}
                           style={{
@@ -261,39 +262,49 @@ export function TimeGrid({
                             height: h - 2,
                             left: `calc(${(lane / lanes) * 100}% + 2px)`,
                             width: `calc(${100 / lanes}% - 4px)`,
-                            backgroundColor: 'rgba(16, 16, 22, 0.94)',
-                            borderColor: tint(color, 0.6),
-                            borderLeft: `4px solid ${color}`,
-                            boxShadow: `0 4px 14px ${tint(color, 0.18)}`,
+                            background: `linear-gradient(135deg, ${tint(color, 0.28)}, rgba(20, 20, 30, 0.97))`,
+                            borderColor: tint(color, 0.8),
+                            borderLeft: `5px solid ${color}`,
+                            boxShadow: `0 4px 18px -2px ${tint(color, 0.35)}`,
                           }}
                         >
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[a.status])} />
-                            <span className="font-bold tabular-nums text-amber-300 text-[11px]">{toHHMM(start)}</span>
-                            {a.isFitIn && <Zap className="h-3 w-3 shrink-0 text-amber-400" />}
-                            {a.checkedInAt && (
-                              <span className="shrink-0 rounded bg-emerald-500/20 border border-emerald-500/40 px-1 text-[9px] font-bold text-emerald-300">
-                                CHEGOU
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              <span className={cn('h-2 w-2 shrink-0 rounded-full shadow-sm', STATUS_DOT[a.status])} />
+                              <span className="font-extrabold tabular-nums text-amber-300 text-[11px] bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
+                                {toHHMM(start)}
                               </span>
-                            )}
-                            {a.recurrenceId && <Repeat className="h-3 w-3 shrink-0 text-zinc-400" />}
-                            {a.orderId && (
-                              <span className="ml-auto shrink-0 rounded bg-white/10 border border-white/15 px-1 text-[9px] font-semibold text-zinc-200">
-                                CMD
-                              </span>
-                            )}
-                          </div>
-                          <div className={cn('truncate font-bold text-white text-xs', a.status === 'CANCELLED' && 'line-through text-zinc-400')}>
-                            {name}
-                          </div>
-                          {h > 44 && (
-                            <div className="truncate text-zinc-300 text-[11px] mt-0.5">
+                              {a.isFitIn && <Zap className="h-3 w-3 shrink-0 text-amber-400" />}
+                              {a.checkedInAt && (
+                                <span className="shrink-0 rounded bg-emerald-500/25 border border-emerald-500/50 px-1.5 text-[9px] font-bold text-emerald-300">
+                                  CHEGOU
+                                </span>
+                              )}
+                              {a.recurrenceId && <Repeat className="h-3 w-3 shrink-0 text-zinc-400" />}
+                              {a.orderId && (
+                                <span className="ml-auto shrink-0 rounded bg-amber-500/20 border border-amber-500/40 px-1.5 text-[9px] font-bold text-amber-300">
+                                  CMD
+                                </span>
+                              )}
+                            </div>
+
+                            <div className={cn('truncate font-bold text-white text-[13px] drop-shadow-sm', a.status === 'CANCELLED' && 'line-through text-zinc-400')}>
+                              {name}
+                            </div>
+
+                            <div className="truncate text-zinc-200 text-xs font-medium mt-0.5 drop-shadow-sm">
                               {services}
                             </div>
-                          )}
-                          {h > 64 && (
-                            <div className="truncate text-[10px] text-zinc-400 mt-0.5">
-                              {STATUS_LABEL[a.status]}
+                          </div>
+
+                          {h > 58 && (
+                            <div className="mt-1 pt-1 border-t border-white/10 flex items-center justify-between">
+                              <span className="text-[10px] font-semibold text-zinc-300">
+                                {STATUS_LABEL[a.status]}
+                              </span>
+                              <span className="text-[10px] text-zinc-400 font-medium tabular-nums">
+                                até {toHHMM(end)}
+                              </span>
                             </div>
                           )}
                         </button>
