@@ -41,6 +41,74 @@ export class SuperAdminGuard implements CanActivate {
   }
 }
 
+function computeTenantHealth(t: {
+  createdAt: Date;
+  appointmentsCount: number;
+  lastAppointmentAt: Date | null;
+  lastLoginAt: Date | null;
+  isActive: boolean;
+}) {
+  if (!t.isActive) {
+    return { status: 'BLOCKED' as const, label: 'Bloqueada', reason: 'Barbearia desativada manualmente', daysInactive: 0 };
+  }
+  const now = Date.now();
+  const daysSinceCreated = Math.floor((now - new Date(t.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceLastAppt = t.lastAppointmentAt
+    ? Math.floor((now - new Date(t.lastAppointmentAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const daysSinceLastLogin = t.lastLoginAt
+    ? Math.floor((now - new Date(t.lastLoginAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  if (t.appointmentsCount === 0 && daysSinceCreated >= 3) {
+    return {
+      status: 'CRITICAL' as const,
+      label: 'Risco Crítico',
+      reason: `Sem agendamentos há ${daysSinceCreated} dias após cadastro`,
+      daysInactive: daysSinceCreated,
+    };
+  }
+  if (daysSinceLastAppt !== null && daysSinceLastAppt >= 7) {
+    return {
+      status: 'CRITICAL' as const,
+      label: 'Risco Crítico',
+      reason: `Parou de agendar há ${daysSinceLastAppt} dias`,
+      daysInactive: daysSinceLastAppt,
+    };
+  }
+  if (daysSinceLastAppt !== null && daysSinceLastAppt >= 4) {
+    return {
+      status: 'ATTENTION' as const,
+      label: 'Atenção',
+      reason: `Sem agendamentos há ${daysSinceLastAppt} dias`,
+      daysInactive: daysSinceLastAppt,
+    };
+  }
+  if (daysSinceLastLogin !== null && daysSinceLastLogin >= 5) {
+    return {
+      status: 'ATTENTION' as const,
+      label: 'Atenção',
+      reason: `Dono sem logar há ${daysSinceLastLogin} dias`,
+      daysInactive: daysSinceLastLogin,
+    };
+  }
+  if (t.appointmentsCount === 0 && daysSinceCreated < 3) {
+    return {
+      status: 'ATTENTION' as const,
+      label: 'Onboarding',
+      reason: 'Cadastro recente, aguardando 1º agendamento',
+      daysInactive: daysSinceCreated,
+    };
+  }
+
+  return {
+    status: 'HEALTHY' as const,
+    label: 'Saudável',
+    reason: daysSinceLastAppt !== null ? `Último atendimento há ${daysSinceLastAppt}d` : 'Operação ativa',
+    daysInactive: daysSinceLastAppt ?? 0,
+  };
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -71,15 +139,83 @@ export class AdminService {
   }
 
   async overview() {
-    const [tenants, byStatus, users, appointments30, revenue30, invoicesOpen] = await Promise.all([
+    const [tenants, byStatus, users, appointments30, revenue30, invoicesOpen, allTenants] = await Promise.all([
       this.prisma.tenant.count({ where: { deletedAt: null } }),
       this.prisma.tenant.groupBy({ by: ['planStatus'], where: { deletedAt: null }, _count: true }),
       this.prisma.user.count(),
       this.prisma.appointment.count({ where: { createdAt: { gte: addDays(new Date(), -30) } } }),
       this.prisma.order.aggregate({ where: { status: 'CLOSED', closedAt: { gte: addDays(new Date(), -30) } }, _sum: { total: true } }),
       this.prisma.invoice.aggregate({ where: { status: { in: ['OPEN', 'OVERDUE'] } }, _sum: { amount: true }, _count: true }),
+      this.prisma.tenant.findMany({
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          phone: true,
+          whatsapp: true,
+          createdAt: true,
+          isActive: true,
+          planStatus: true,
+          _count: { select: { appointments: true, professionals: true, services: true } },
+          appointments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true },
+          },
+          memberships: {
+            where: { role: 'OWNER' },
+            take: 1,
+            select: {
+              user: { select: { name: true, phone: true, email: true, lastLoginAt: true } },
+            },
+          },
+        },
+      }),
     ]);
     const mrr = await this.prisma.tenant.findMany({ where: { planStatus: 'ACTIVE' }, select: { planCode: true } });
+
+    const evaluated = allTenants.map((t) => {
+      const lastAppt = t.appointments[0]?.createdAt ?? null;
+      const owner = t.memberships[0]?.user ?? null;
+      const health = computeTenantHealth({
+        createdAt: t.createdAt,
+        appointmentsCount: t._count.appointments,
+        lastAppointmentAt: lastAppt,
+        lastLoginAt: owner?.lastLoginAt ?? null,
+        isActive: t.isActive,
+      });
+      return {
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        phone: t.whatsapp || t.phone || owner?.phone || null,
+        ownerName: owner?.name ?? 'Responsável',
+        ownerEmail: owner?.email ?? null,
+        planStatus: t.planStatus,
+        appointmentsCount: t._count.appointments,
+        lastAppointmentAt: lastAppt,
+        health,
+        checklist: {
+          hasProfessionals: t._count.professionals > 0,
+          hasServices: t._count.services > 0,
+          hasAppointments: t._count.appointments > 0,
+          hasPhone: !!(t.whatsapp || t.phone || owner?.phone),
+        },
+      };
+    });
+
+    const healthSummary = {
+      healthy: evaluated.filter((e) => e.health.status === 'HEALTHY').length,
+      attention: evaluated.filter((e) => e.health.status === 'ATTENTION').length,
+      critical: evaluated.filter((e) => e.health.status === 'CRITICAL').length,
+    };
+
+    const atRiskTenants = evaluated
+      .filter((e) => e.health.status === 'CRITICAL' || e.health.status === 'ATTENTION')
+      .sort((a, b) => (b.health.status === 'CRITICAL' ? 1 : 0) - (a.health.status === 'CRITICAL' ? 1 : 0))
+      .slice(0, 10);
+
     return {
       tenants,
       byStatus: byStatus.map((s) => ({ status: s.planStatus, count: s._count })),
@@ -88,10 +224,12 @@ export class AdminService {
       gmvLast30d: money(revenue30._sum.total),
       mrr: money(mrr.reduce((s, t) => s + (PLANS.find((p) => p.code === t.planCode)?.promoPrice ?? 0), 0)),
       openInvoices: { count: invoicesOpen._count, amount: money(invoicesOpen._sum.amount) },
+      healthSummary,
+      atRiskTenants,
     };
   }
 
-  async listTenants(q: { search?: string; status?: string; page?: string; limit?: string }) {
+  async listTenants(q: { search?: string; status?: string; health?: string; page?: string; limit?: string }) {
     const page = Math.max(1, Number(q.page) || 1);
     const limit = Math.min(100, Number(q.limit) || 30);
     const where = {
@@ -99,26 +237,160 @@ export class AdminService {
       ...(q.status ? { planStatus: q.status as PlanStatus } : {}),
       ...(q.search ? { OR: [{ name: { contains: q.search, mode: 'insensitive' as const } }, { slug: { contains: q.search, mode: 'insensitive' as const } }, { email: { contains: q.search, mode: 'insensitive' as const } }] } : {}),
     };
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.prisma.tenant.findMany({
         where,
-        select: { id: true, name: true, slug: true, email: true, phone: true, addressCity: true, addressState: true, planCode: true, planStatus: true, trialEndsAt: true, planRenewsAt: true, createdAt: true, isActive: true, onboardingStep: true, _count: { select: { professionals: true, clients: true, appointments: true } } },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          email: true,
+          phone: true,
+          whatsapp: true,
+          addressCity: true,
+          addressState: true,
+          planCode: true,
+          planStatus: true,
+          trialEndsAt: true,
+          planRenewsAt: true,
+          createdAt: true,
+          isActive: true,
+          onboardingStep: true,
+          _count: { select: { professionals: true, services: true, clients: true, appointments: true } },
+          appointments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true },
+          },
+          memberships: {
+            where: { role: 'OWNER' },
+            take: 1,
+            select: {
+              user: { select: { name: true, phone: true, email: true, lastLoginAt: true } },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
       this.prisma.tenant.count({ where }),
     ]);
+
+    let items = rawItems.map((t) => {
+      const lastAppt = t.appointments[0]?.createdAt ?? null;
+      const owner = t.memberships[0]?.user ?? null;
+      const health = computeTenantHealth({
+        createdAt: t.createdAt,
+        appointmentsCount: t._count.appointments,
+        lastAppointmentAt: lastAppt,
+        lastLoginAt: owner?.lastLoginAt ?? null,
+        isActive: t.isActive,
+      });
+      const checklist = {
+        hasProfessionals: t._count.professionals > 0,
+        hasServices: t._count.services > 0,
+        hasAppointments: t._count.appointments > 0,
+        hasPhone: !!(t.whatsapp || t.phone || owner?.phone),
+      };
+      const score = (checklist.hasProfessionals ? 1 : 0) + (checklist.hasServices ? 1 : 0) + (checklist.hasAppointments ? 1 : 0) + (checklist.hasPhone ? 1 : 0);
+      return {
+        ...t,
+        lastAppointmentAt: lastAppt,
+        owner: owner ? { name: owner.name, phone: owner.phone, email: owner.email, lastLoginAt: owner.lastLoginAt } : null,
+        health,
+        checklist: {
+          ...checklist,
+          score,
+          percent: Math.round((score / 4) * 100),
+        },
+      };
+    });
+
+    if (q.health && q.health !== 'ALL') {
+      items = items.filter((i) => i.health.status === q.health);
+    }
+
     return { items, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
   async getTenant(id: string) {
-    const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id }, include: { memberships: { include: { user: { select: { id: true, name: true, email: true, phone: true, lastLoginAt: true } } } }, invoices: { orderBy: { dueDate: 'desc' }, take: 24 } } });
-    const [orders, lastAppointment] = await Promise.all([
+    const t = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id },
+      include: {
+        memberships: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true, lastLoginAt: true } },
+          },
+        },
+        invoices: { orderBy: { dueDate: 'desc' }, take: 24 },
+        _count: { select: { professionals: true, services: true, clients: true, appointments: true, products: true } },
+      },
+    });
+
+    const [orders, lastAppointment, recentAppointments, recentMessages] = await Promise.all([
       this.prisma.order.aggregate({ where: { tenantId: id, status: 'CLOSED' }, _sum: { total: true }, _count: true }),
       this.prisma.appointment.findFirst({ where: { tenantId: id }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      this.prisma.appointment.findMany({
+        where: { tenantId: id },
+        orderBy: { startAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          startAt: true,
+          status: true,
+          totalPrice: true,
+          client: { select: { name: true, phone: true } },
+          professional: { select: { name: true } },
+          services: { select: { service: { select: { name: true } } } },
+        },
+      }),
+      this.prisma.messageLog.findMany({
+        where: { tenantId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          channel: true,
+          kind: true,
+          status: true,
+          recipient: true,
+          createdAt: true,
+          error: true,
+        },
+      }),
     ]);
-    return { ...t, stats: { orders: orders._count, gmv: money(orders._sum.total), lastAppointmentAt: lastAppointment?.createdAt ?? null } };
+
+    const owner = t.memberships.find((m) => m.role === 'OWNER')?.user ?? t.memberships[0]?.user ?? null;
+    const health = computeTenantHealth({
+      createdAt: t.createdAt,
+      appointmentsCount: t._count.appointments,
+      lastAppointmentAt: lastAppointment?.createdAt ?? null,
+      lastLoginAt: owner?.lastLoginAt ?? null,
+      isActive: t.isActive,
+    });
+
+    const checklist = {
+      hasProfessionals: t._count.professionals > 0,
+      hasServices: t._count.services > 0,
+      hasAppointments: t._count.appointments > 0,
+      hasPhone: !!(t.whatsapp || t.phone || owner?.phone),
+      hasOpeningHours: !!t.openingHours,
+    };
+
+    return {
+      ...t,
+      stats: {
+        orders: orders._count,
+        gmv: money(orders._sum.total),
+        lastAppointmentAt: lastAppointment?.createdAt ?? null,
+      },
+      health,
+      checklist,
+      owner,
+      recentAppointments,
+      recentMessages,
+    };
   }
 
   async createTenant(body: {

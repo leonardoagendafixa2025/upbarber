@@ -55,7 +55,13 @@ import {
   THead,
   TR,
 } from '@/components/ui';
-import { adminApi, AdminInvoiceRow } from '@/lib/api/admin';
+import {
+  adminApi,
+  AdminInvoiceRow,
+  AdminTenantDetail,
+  TenantChecklist,
+  TenantHealth,
+} from '@/lib/api/admin';
 import { authApi } from '@/lib/api/auth';
 import { billingApi } from '@/lib/api/billing';
 import { errorMessage } from '@/lib/api/client';
@@ -68,6 +74,95 @@ const statusLabel = (s: string) => (s === 'CANCELLED' ? 'Cancelado' : STATUS_LAB
 
 function StatusPill({ status }: { status: string }) {
   return <span className={cn('inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium', STATUS_COLOR[status] ?? 'bg-gray-100 text-gray-700 border-gray-200')}>{statusLabel(status)}</span>;
+}
+
+function HealthPill({ health }: { health?: TenantHealth }) {
+  if (!health) return null;
+  const colors: Record<string, string> = {
+    HEALTHY: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    ATTENTION: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    CRITICAL: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    BLOCKED: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+  };
+  const dots: Record<string, string> = {
+    HEALTHY: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',
+    ATTENTION: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]',
+    CRITICAL: 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse',
+    BLOCKED: 'bg-zinc-400',
+  };
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+        colors[health.status] ?? 'bg-gray-100 text-gray-700 border-gray-200',
+      )}
+      title={health.reason}
+    >
+      <span className={cn('h-1.5 w-1.5 rounded-full', dots[health.status] ?? 'bg-gray-400')} />
+      {health.label}
+    </span>
+  );
+}
+
+function ChecklistBadges({ checklist }: { checklist?: TenantChecklist }) {
+  if (!checklist) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span
+        title={checklist.hasProfessionals ? 'Profissionais cadastrados' : 'Sem profissionais'}
+        className={cn(
+          'inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+          checklist.hasProfessionals
+            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+            : 'border-zinc-700 bg-zinc-800/60 text-zinc-500',
+        )}
+      >
+        ✂️ Prof
+      </span>
+      <span
+        title={checklist.hasServices ? 'Serviços cadastrados' : 'Sem serviços'}
+        className={cn(
+          'inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+          checklist.hasServices
+            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+            : 'border-zinc-700 bg-zinc-800/60 text-zinc-500',
+        )}
+      >
+        💈 Serv
+      </span>
+      <span
+        title={checklist.hasAppointments ? 'Possui agendamentos' : 'Sem nenhum agendamento'}
+        className={cn(
+          'inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+          checklist.hasAppointments
+            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+            : 'border-zinc-700 bg-zinc-800/60 text-zinc-500',
+        )}
+      >
+        📅 Agend
+      </span>
+      <span
+        title={checklist.hasPhone ? 'WhatsApp cadastrado' : 'Sem WhatsApp'}
+        className={cn(
+          'inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+          checklist.hasPhone
+            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+            : 'border-zinc-700 bg-zinc-800/60 text-zinc-500',
+        )}
+      >
+        📱 Zap
+      </span>
+    </div>
+  );
+}
+
+function makeWhatsAppLink(phone: string | null | undefined, ownerName: string, shopName: string, _reason?: string) {
+  if (!phone) return '#';
+  const raw = phone.replace(/\D/g, '');
+  const num = raw.startsWith('55') ? raw : `55${raw}`;
+  const firstName = (ownerName || '').split(' ')[0] || 'amigo';
+  const text = `Olá ${firstName}! Sou da equipe do UP BARBER. Vi que você cadastrou a barbearia ${shopName}. Gostaria de saber se você conseguiu configurar seus profissionais e serviços, ou se precisa de ajuda com alguma dúvida inicial para começar a agendar?`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 }
 
 function usePlanNames() {
@@ -110,6 +205,95 @@ function Overview() {
         <StatCard label="GMV (30d)" value={money(data.gmvLast30d)} icon={DollarSign} hint="Comandas fechadas" />
         <StatCard label="Faturas em aberto" value={money(data.openInvoices.amount)} icon={CreditCard} hint={`${data.openInvoices.count} fatura(s)`} />
       </div>
+
+      {/* Radar Anti-Churn & Saúde da Base */}
+      <div className="mt-6 rounded-2xl border border-white/10 bg-[#0d0d12] p-5 shadow-lg">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
+              <h3 className="text-base font-bold text-white tracking-tight">Radar Anti-Churn & Saúde das Barbearias</h3>
+            </div>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Identificação automática de barbearias paradas, sem agendamentos ou com risco de cancelamento.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              {data.healthSummary?.healthy ?? 0} Saudáveis
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              {data.healthSummary?.attention ?? 0} Em Atenção
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-400">
+              <span className="h-2 w-2 rounded-full bg-rose-400" />
+              {data.healthSummary?.critical ?? 0} Risco Crítico
+            </span>
+          </div>
+        </div>
+
+        {/* Lista de Barbearias em Risco */}
+        {(!data.atRiskTenants || data.atRiskTenants.length === 0) ? (
+          <div className="py-6 text-center text-sm text-zinc-400">
+            <CheckCircle2 className="mx-auto mb-2 h-7 w-7 text-emerald-400" />
+            <p className="font-semibold text-white">Nenhuma barbearia em risco no momento!</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Todas as barbearias estão ativas ou com agendamentos recentes.</p>
+          </div>
+        ) : (
+          <div className="mt-4 divide-y divide-white/5">
+            {data.atRiskTenants.map((t) => {
+              const waLink = makeWhatsAppLink(t.phone, t.ownerName, t.name, t.health.reason);
+              return (
+                <div key={t.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link to={`barbearias/${t.id}`} className="font-bold text-white hover:text-amber-400 transition-colors">
+                        {t.name}
+                      </Link>
+                      <span className="text-xs text-zinc-500">/{t.slug}</span>
+                      <HealthPill health={t.health} />
+                      <StatusPill status={t.planStatus} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
+                      <span>Responsável: <strong className="text-zinc-200">{t.ownerName}</strong></span>
+                      {t.phone && <span>Tel: {fmtPhone(t.phone)}</span>}
+                      <span className="text-rose-300 font-medium">Motivo: {t.health.reason}</span>
+                    </div>
+                    <div className="mt-2">
+                      <ChecklistBadges checklist={t.checklist} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {t.phone && (
+                      <Button
+                        size="sm"
+                        asChild
+                        className="bg-emerald-600 text-white font-semibold hover:bg-emerald-500 shadow-sm"
+                      >
+                        <a href={waLink} target="_blank" rel="noreferrer">
+                          <MessageSquare className="h-3.5 w-3.5 mr-1" /> WhatsApp Suporte
+                        </a>
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/10 text-zinc-300 hover:text-white hover:bg-white/10"
+                      asChild
+                    >
+                      <Link to={`barbearias/${t.id}`}>Ver Detalhes</Link>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <Integrations />
       <Section title="Barbearias por status" className="mt-6">
         {data.byStatus.length === 0 ? (
@@ -277,6 +461,7 @@ function TenantList() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
+  const health = params.get('health') ?? '';
   const page = Number(params.get('page') ?? 1);
   const [search, setSearch] = useState(params.get('search') ?? '');
   const searchParam = params.get('search') ?? '';
@@ -315,8 +500,8 @@ function TenantList() {
   };
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin-tenants', searchParam, status, page],
-    queryFn: () => adminApi.tenants({ search: searchParam || undefined, status: status || undefined, page }),
+    queryKey: ['admin-tenants', searchParam, status, health, page],
+    queryFn: () => adminApi.tenants({ search: searchParam || undefined, status: status || undefined, health: health || undefined, page }),
     placeholderData: keepPreviousData,
   });
 
@@ -347,7 +532,7 @@ function TenantList() {
     <div>
       <PageHeader
         title="Barbearias Cadastradas"
-        description={data ? `${data.total} barbearia(s) no sistema. Você pode gerenciar, criar novas ou entrar no painel de qualquer uma delas.` : 'Todas as barbearias cadastradas na plataforma.'}
+        description={data ? `${data.total} barbearia(s) no sistema. Monitore a saúde, checklist de ativação e entre no painel de qualquer uma delas.` : 'Todas as barbearias cadastradas na plataforma.'}
         actions={
           <Button onClick={() => setCreateOpen(true)} className="border-[#c9a227] bg-[#c9a227] font-semibold text-black hover:bg-[#f0cc66] shadow-sm">
             <Plus className="h-4 w-4" /> Cadastrar Barbearia
@@ -355,16 +540,54 @@ function TenantList() {
         }
       />
 
-      <Card className="mb-4 flex flex-col gap-3 p-4 sm:flex-row">
-        <Input prefix={<Search className="h-4 w-4" />} placeholder="Buscar por nome, endereço (slug) ou e-mail" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1" />
-        <Select value={status} onChange={(e) => setParam('status', e.target.value)} className="sm:w-48">
-          <option value="">Todos os status</option>
-          {PLAN_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel(s)}
-            </option>
-          ))}
-        </Select>
+      {/* Filtros de Busca, Saúde e Status */}
+      <Card className="mb-4 p-4">
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <Button
+            size="sm"
+            variant={health === '' ? 'default' : 'outline'}
+            onClick={() => setParam('health', '')}
+            className={health === '' ? 'bg-[#c9a227] text-black font-semibold' : 'border-white/10 text-zinc-300'}
+          >
+            Todas
+          </Button>
+          <Button
+            size="sm"
+            variant={health === 'CRITICAL' ? 'destructive' : 'outline'}
+            onClick={() => setParam('health', health === 'CRITICAL' ? '' : 'CRITICAL')}
+            className={health === 'CRITICAL' ? 'bg-rose-600 text-white font-semibold' : 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10'}
+          >
+            🔴 Risco Crítico
+          </Button>
+          <Button
+            size="sm"
+            variant={health === 'ATTENTION' ? 'default' : 'outline'}
+            onClick={() => setParam('health', health === 'ATTENTION' ? '' : 'ATTENTION')}
+            className={health === 'ATTENTION' ? 'bg-amber-600 text-white font-semibold' : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'}
+          >
+            🟡 Atenção
+          </Button>
+          <Button
+            size="sm"
+            variant={health === 'HEALTHY' ? 'success' : 'outline'}
+            onClick={() => setParam('health', health === 'HEALTHY' ? '' : 'HEALTHY')}
+            className={health === 'HEALTHY' ? 'bg-emerald-600 text-white font-semibold' : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'}
+          >
+            🟢 Saudáveis
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Input prefix={<Search className="h-4 w-4" />} placeholder="Buscar por nome, endereço (slug) ou e-mail" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1" />
+          <Select value={status} onChange={(e) => setParam('status', e.target.value)} className="sm:w-48">
+            <option value="">Todos os status</option>
+            {PLAN_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </Select>
+        </div>
       </Card>
 
       <Card className={cn(isFetching && 'opacity-70')}>
@@ -387,66 +610,95 @@ function TenantList() {
             <THead>
               <TR>
                 <TH>Barbearia</TH>
+                <TH>Saúde (Anti-Churn)</TH>
+                <TH>Setup</TH>
                 <TH>Cidade</TH>
                 <TH>Plano</TH>
-                <TH>Status</TH>
                 <TH className="text-right">Prof.</TH>
-                <TH className="text-right">Clientes</TH>
                 <TH className="text-right">Agend.</TH>
-                <TH>Cadastro</TH>
                 <TH className="text-right">Ações</TH>
               </TR>
             </THead>
             <TBody>
-              {data.items.map((t) => (
-                <TR key={t.id}>
-                  <TD>
-                    <Link to={t.id} className="font-semibold text-foreground hover:text-primary hover:underline">
-                      {t.name}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">
-                      /{t.slug}
-                      {!t.isActive && <span className="ml-2 font-medium text-red-600">· inativa</span>}
-                      {t.email && <span className="ml-2">· {t.email}</span>}
-                    </div>
-                  </TD>
-                  <TD className="whitespace-nowrap text-muted-foreground">{t.addressCity ? `${t.addressCity}${t.addressState ? `/${t.addressState}` : ''}` : '-'}</TD>
-                  <TD className="whitespace-nowrap">{planName(t.planCode)}</TD>
-                  <TD>
-                    <StatusPill status={t.planStatus} />
-                    {t.planStatus === 'TRIAL' && t.trialEndsAt && <div className="mt-0.5 text-xs text-muted-foreground">até {fmtDate(t.trialEndsAt)}</div>}
-                  </TD>
-                  <TD className="text-right">{t._count.professionals}</TD>
-                  <TD className="text-right">{t._count.clients}</TD>
-                  <TD className="text-right">{t._count.appointments}</TD>
-                  <TD className="whitespace-nowrap text-muted-foreground">{fmtDate(t.createdAt)}</TD>
-                  <TD className="text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#c9a227]/40 text-[#c9a227] hover:bg-[#c9a227]/10"
-                        title="Entrar no painel operacional desta barbearia como administrador"
-                        onClick={() => handleEnterTenant(t.id, t.name)}
-                      >
-                        <LogIn className="h-3.5 w-3.5" /> Acessar Painel
-                      </Button>
-                      <Button size="sm" variant="ghost" asChild title="Ver detalhes e editar licença">
-                        <Link to={t.id}>Gerenciar</Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                        title="Excluir barbearia"
-                        onClick={() => setDeleteTarget({ id: t.id, name: t.name })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TD>
-                </TR>
-              ))}
+              {data.items.map((t) => {
+                const ownerPhone = t.whatsapp || t.phone || t.owner?.phone;
+                const ownerName = t.owner?.name ?? 'Responsável';
+                const waLink = makeWhatsAppLink(ownerPhone, ownerName, t.name, t.health?.reason);
+
+                return (
+                  <TR key={t.id}>
+                    <TD>
+                      <Link to={t.id} className="font-semibold text-foreground hover:text-primary hover:underline">
+                        {t.name}
+                      </Link>
+                      <div className="text-xs text-muted-foreground">
+                        /{t.slug}
+                        {!t.isActive && <span className="ml-2 font-medium text-red-600">· inativa</span>}
+                        {t.owner?.name && <span className="ml-2">· {t.owner.name}</span>}
+                      </div>
+                    </TD>
+                    <TD>
+                      <HealthPill health={t.health} />
+                      {t.health?.reason && (
+                        <div className="mt-0.5 max-w-[200px] truncate text-[11px] text-zinc-400" title={t.health.reason}>
+                          {t.health.reason}
+                        </div>
+                      )}
+                    </TD>
+                    <TD>
+                      <ChecklistBadges checklist={t.checklist} />
+                      <div className="mt-0.5 text-[10px] text-muted-foreground font-semibold">
+                        {t.checklist?.percent ?? 0}% pronto
+                      </div>
+                    </TD>
+                    <TD className="whitespace-nowrap text-muted-foreground">{t.addressCity ? `${t.addressCity}${t.addressState ? `/${t.addressState}` : ''}` : '-'}</TD>
+                    <TD className="whitespace-nowrap">
+                      <div>{planName(t.planCode)}</div>
+                      <StatusPill status={t.planStatus} />
+                    </TD>
+                    <TD className="text-right font-medium">{t._count.professionals}</TD>
+                    <TD className="text-right font-medium">{t._count.appointments}</TD>
+                    <TD className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {ownerPhone && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                            asChild
+                            title="Conversar com o dono no WhatsApp"
+                          >
+                            <a href={waLink} target="_blank" rel="noreferrer">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#c9a227]/40 text-[#c9a227] hover:bg-[#c9a227]/10"
+                          title="Entrar no painel operacional desta barbearia como administrador"
+                          onClick={() => handleEnterTenant(t.id, t.name)}
+                        >
+                          <LogIn className="h-3.5 w-3.5" /> Acessar Painel
+                        </Button>
+                        <Button size="sm" variant="ghost" asChild title="Ver detalhes e diagnóstico">
+                          <Link to={t.id}>Ficha</Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                          title="Excluir barbearia"
+                          onClick={() => setDeleteTarget({ id: t.id, name: t.name })}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TD>
+                  </TR>
+                );
+              })}
             </TBody>
           </Table>
         )}
@@ -472,29 +724,6 @@ function TenantList() {
 }
 
 // ---------------- detalhe da barbearia ----------------
-interface AdminTenantDetail {
-  id: string;
-  name: string;
-  slug: string;
-  email: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  document: string | null;
-  addressCity: string | null;
-  addressState: string | null;
-  planCode: string;
-  planStatus: string;
-  trialEndsAt: string | null;
-  planRenewsAt: string | null;
-  maxProfessionals: number;
-  isActive: boolean;
-  onboardingStep: number;
-  createdAt: string;
-  memberships: { id: string; role: string; isActive?: boolean; user: { id: string; name: string; email: string; phone?: string | null; lastLoginAt: string | null } }[];
-  invoices: { id: string; planCode: string; amount: number | string; periodStart: string; periodEnd: string; dueDate: string; status: string; paidAt: string | null; checkoutUrl: string | null }[];
-  stats: { orders: number; gmv: number; lastAppointmentAt: string | null };
-}
-
 function TenantDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -591,6 +820,47 @@ function TenantDetail() {
         }
       />
 
+      {/* Card de Saúde & Diagnóstico Rápido */}
+      <div className="mb-6 rounded-2xl border border-white/10 bg-[#0d0d12] p-5 shadow-lg">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-1">
+              <HealthPill health={t.health} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Diagnóstico de Atividade</h3>
+              <p className="text-sm text-zinc-300 mt-0.5">{t.health?.reason}</p>
+              <div className="mt-2 text-xs text-zinc-400">
+                Responsável: <strong className="text-white">{t.owner?.name ?? 'Não identificado'}</strong>
+                {t.owner?.phone && <> · Tel: <strong className="text-white">{fmtPhone(t.owner.phone)}</strong></>}
+                {t.owner?.lastLoginAt && <> · Último login: {fmtRelative(t.owner.lastLoginAt)}</>}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {(t.owner?.phone || t.whatsapp || t.phone) && (
+              <Button asChild className="bg-emerald-600 text-white font-semibold hover:bg-emerald-500 shadow">
+                <a href={makeWhatsAppLink(t.owner?.phone || t.whatsapp || t.phone, t.owner?.name ?? 'Responsável', t.name, t.health?.reason)} target="_blank" rel="noreferrer">
+                  <MessageSquare className="h-4 w-4 mr-1.5" /> Falar no WhatsApp
+                </a>
+              </Button>
+            )}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-center">
+              <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-bold">Setup da Barbearia</div>
+              <div className="text-sm font-extrabold text-amber-400">
+                {t.checklist ? Math.round((((t.checklist.hasProfessionals ? 1 : 0) + (t.checklist.hasServices ? 1 : 0) + (t.checklist.hasAppointments ? 1 : 0) + (t.checklist.hasPhone ? 1 : 0)) / 4) * 100) : 0}% Concluído
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center gap-4 text-xs">
+          <span className="font-semibold text-zinc-300">Etapas de Ativação:</span>
+          <ChecklistBadges checklist={t.checklist} />
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Dados Gerais da Barbearia" description="Informações cadastrais e de contato">
           <div className="space-y-4">
@@ -683,6 +953,65 @@ function TenantDetail() {
           </ul>
         )}
       </Section>
+
+      {/* Raio-X & Diagnóstico de Suporte */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Section title="Últimos Agendamentos" description="10 atendimentos mais recentes da barbearia">
+          {(!t.recentAppointments || t.recentAppointments.length === 0) ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Nenhum agendamento realizado ainda.</p>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {t.recentAppointments.map((a) => (
+                <div key={a.id} className="flex items-center justify-between py-2.5 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-white truncate">
+                      {a.client?.name ?? 'Cliente sem cadastro'}
+                      {a.services?.[0] && <span className="text-zinc-400 font-normal"> · {a.services.map((s) => s.service.name).join(', ')}</span>}
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      {fmtDate(a.startAt)} às {fmtDate(a.startAt, 'HH:mm')} · Profissional: {a.professional?.name ?? '-'}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <div className="font-bold text-amber-400">{money(a.totalPrice)}</div>
+                    <span className={cn('inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold border', STATUS_COLOR[a.status])}>
+                      {STATUS_LABEL[a.status] ?? a.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Últimos Disparos de WhatsApp" description="10 mensagens enviadas recentemente">
+          {(!t.recentMessages || t.recentMessages.length === 0) ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Nenhum disparo de mensagem registrado.</p>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {t.recentMessages.map((m) => (
+                <div key={m.id} className="flex items-center justify-between py-2.5 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-white truncate">
+                      Para: {fmtPhone(m.recipient)}
+                      <span className="text-zinc-400 font-normal"> · {m.kind}</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      {fmtDate(m.createdAt, "dd/MM 'às' HH:mm")}
+                      {m.error && <span className="text-rose-400 ml-1">· Erro: {m.error}</span>}
+                    </div>
+                  </div>
+                  <div className="shrink-0 ml-3">
+                    <Badge variant={m.status === 'SENT' || m.status === 'DELIVERED' || m.status === 'READ' ? 'success' : m.status === 'FAILED' ? 'destructive' : 'secondary'}>
+                      {m.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+      </div>
     </div>
   );
 }
