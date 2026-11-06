@@ -97,14 +97,13 @@ export default function AgendaPage() {
   const columns: GridColumn[] = useMemo(() => {
     if (!data) return [];
     if (view === 'day') {
-      return allPros.map((p, idx) => {
+      return allPros.map((p) => {
         const w = workingFor(p, date, data.openingHours);
         const proAppointments = appointments.filter((a) => a.professionalId === p.id && a.status !== 'CANCELLED');
         const proBookedMinutes = proAppointments.reduce((sum, a) => sum + (a.totalDuration || 30), 0);
         const proWorkMinutes = w.working.reduce((sum, intv) => sum + (intv.end - intv.start), 0) || 480;
         const calculatedOccupancy = Math.min(100, Math.round((proBookedMinutes / proWorkMinutes) * 100));
-        // Fallback fiel ao mockup quando dados forem iniciais
-        const occupancy = calculatedOccupancy > 0 ? calculatedOccupancy : idx === 0 ? 85 : 60;
+        const occupancy = Number.isFinite(calculatedOccupancy) ? calculatedOccupancy : 0;
         const initials = p.name.split(' ').map((n) => n[0]).slice(0, 2).join('');
 
         return {

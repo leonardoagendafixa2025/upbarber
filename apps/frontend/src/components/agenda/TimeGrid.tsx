@@ -173,9 +173,8 @@ export function TimeGrid({
           </div>
         </div>
 
-        {columns.map((col, colIdx) => {
+        {columns.map((col) => {
           const colData = perColumn.get(col.key);
-          const hasFitInHere = colIdx === 2 || col.professionalId.toLowerCase().includes('pedro');
 
           return (
             <div key={col.key} className="min-w-[240px] flex-1 border-r border-white/10 last:border-r-0">
@@ -359,27 +358,6 @@ export function TimeGrid({
                     );
                   })}
 
-                {/* Card tracejado de Encaixe sugerido na coluna compatível */}
-                {hasFitInHere && (
-                  <div
-                    onClick={() => onSlotClick(col.date, '13:00', col.professionalId)}
-                    className="absolute inset-x-1.5 z-[5] cursor-pointer rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.04] p-2.5 text-left transition-all hover:border-amber-400 hover:bg-amber-500/10 group"
-                    style={{
-                      top: clampTop(13 * 60) + 1,
-                      height: 40 * ppm,
-                    }}
-                  >
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-amber-300">
-                      <span>+ Encaixe sugerido</span>
-                    </div>
-                    <div className="truncate text-xs font-semibold text-zinc-200 mt-0.5 group-hover:text-amber-200">
-                      Marcos Lima <span className="font-normal text-zinc-400">· Corte masculino</span>
-                    </div>
-                    <div className="truncate text-[10px] text-zinc-400 mt-0.5">
-                      13:00–13:40 <span className="text-zinc-500">· volta a cada ~30 dias</span>
-                    </div>
-                  </div>
-                )}
 
                 {/* Linha dourada "Agora" com ponto âmbar */}
                 {col.isToday && now.minutes >= range.start && now.minutes <= range.end && (
