@@ -86,11 +86,13 @@ export default function AgendaPage() {
           off: w.off,
           isToday: date === today,
           header: (
-            <div className="flex min-w-0 items-center gap-2">
-              <Avatar src={p.avatarUrl} name={p.name} size="sm" color={p.color} />
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{p.name}</div>
-                <div className="text-[11px] text-muted-foreground">{w.off ? 'Folga' : w.working.map((x) => `${String(Math.floor(x.start / 60)).padStart(2, '0')}h–${String(Math.floor(x.end / 60)).padStart(2, '0')}h`).join(' / ')}</div>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Avatar src={p.avatarUrl} name={p.name} size="sm" color={p.color} className="ring-2 ring-white/10 shrink-0" />
+              <div className="min-w-0 text-left">
+                <div className="truncate text-sm font-bold text-white drop-shadow-sm">{p.name}</div>
+                <div className="truncate text-[11px] text-zinc-400 font-medium">
+                  {w.off ? 'Folga' : w.working.map((x) => `${String(Math.floor(x.start / 60)).padStart(2, '0')}h–${String(Math.floor(x.end / 60)).padStart(2, '0')}h`).join(' / ')}
+                </div>
               </div>
             </div>
           ),
@@ -109,9 +111,13 @@ export default function AgendaPage() {
           off: w.off,
           isToday: d === today,
           header: (
-            <button className="text-center" onClick={() => { setView('day'); setParam({ date: d }); }}>
-              <div className="text-[11px] uppercase text-muted-foreground">{format(dt, 'EEE', { locale: ptBR })}</div>
-              <div className={cn('text-base font-bold', d === today && 'text-primary')}>{format(dt, 'dd/MM')}</div>
+            <button className="text-center group" onClick={() => { setView('day'); setParam({ date: d }); }}>
+              <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold group-hover:text-amber-400 transition-colors">
+                {format(dt, 'EEE', { locale: ptBR })}
+              </div>
+              <div className={cn('text-base font-bold transition-colors', d === today ? 'text-amber-400 font-extrabold' : 'text-white group-hover:text-amber-300')}>
+                {format(dt, 'dd/MM')}
+              </div>
             </button>
           ),
         };
@@ -214,39 +220,51 @@ export default function AgendaPage() {
     <div>
       <PageHeader
         title="Agenda"
-        description={<span className="capitalize">{title}</span>}
+        description={<span className="capitalize text-zinc-400 font-medium">{title}</span>}
         actions={
-          <>
-            <Button variant="outline" onClick={() => setBlockForm({ open: true, date, professionalId: professionalId || undefined })}>
-              <Lock /> Bloquear horário
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10 hover:text-white"
+              onClick={() => setBlockForm({ open: true, date, professionalId: professionalId || undefined })}
+            >
+              <Lock className="h-4 w-4" /> Bloquear horário
             </Button>
-            <Button onClick={() => openNew()}>
-              <Plus /> Novo agendamento
+            <Button
+              onClick={() => openNew()}
+              className="border-[#c9a227] bg-gradient-to-r from-[#c9a227] to-[#f0cc66] font-bold text-black hover:brightness-110 shadow-lg shadow-amber-500/20"
+            >
+              <Plus className="h-4 w-4" /> Novo agendamento
             </Button>
-          </>
+          </div>
         }
       />
 
       {/* barra de controles */}
-      <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-background p-3 lg:flex-row lg:items-center">
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => setParam({ date: toISODate(new Date()) })}>
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0d0d12]/90 p-3.5 backdrop-blur-md shadow-xl lg:flex-row lg:items-center">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setParam({ date: toISODate(new Date()) })}
+            className="border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white font-medium"
+          >
             Hoje
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => go(-1)} title="Anterior">
+          <Button variant="ghost" size="icon" onClick={() => go(-1)} title="Anterior" className="text-zinc-400 hover:text-white">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => go(1)} title="Próximo">
+          <Button variant="ghost" size="icon" onClick={() => go(1)} title="Próximo" className="text-zinc-400 hover:text-white">
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Input type="date" value={date} onChange={(e) => e.target.value && setParam({ date: e.target.value })} className="w-40" />
-          <Button variant="ghost" size="icon" onClick={() => agendaQ.refetch()} title="Atualizar">
-            <RefreshCw className={cn('h-4 w-4', agendaQ.isFetching && 'animate-spin')} />
+          <Input type="date" value={date} onChange={(e) => e.target.value && setParam({ date: e.target.value })} className="w-40 border-white/10 bg-[#141419]" />
+          <Button variant="ghost" size="icon" onClick={() => agendaQ.refetch()} title="Atualizar" className="text-zinc-400 hover:text-white">
+            <RefreshCw className={cn('h-4 w-4', agendaQ.isFetching && 'animate-spin text-amber-400')} />
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+        <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
           {!isPro && (
-            <Select value={professionalId} onChange={(e) => setParam({ professionalId: e.target.value || null })} className="w-48">
+            <Select value={professionalId} onChange={(e) => setParam({ professionalId: e.target.value || null })} className="w-48 border-white/10 bg-[#141419]">
               <option value="">{view === 'week' ? 'Profissional...' : 'Todos os profissionais'}</option>
               {proOptions.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -255,7 +273,7 @@ export default function AgendaPage() {
               ))}
             </Select>
           )}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
             <Switch checked={showCancelled} onCheckedChange={setShowCancelled} /> Cancelados
           </label>
           <Tabs
@@ -265,43 +283,45 @@ export default function AgendaPage() {
               setParam({ view: v });
             }}
           >
-            <TabsList>
-              <TabsTrigger value="day">Dia</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="list">Lista</TabsTrigger>
+            <TabsList className="bg-[#141419] border border-white/10 p-0.5">
+              <TabsTrigger value="day" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Dia</TabsTrigger>
+              <TabsTrigger value="week" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Semana</TabsTrigger>
+              <TabsTrigger value="list" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:font-semibold">Lista</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </div>
 
-      {/* resumo + legenda */}
-      <div className="mb-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+      {/* resumo + legenda com alto contraste */}
+      <div className="mb-3 flex flex-col gap-2.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-zinc-400">
           <span>
-            <b className="text-foreground">{activeCount}</b> agendamento(s)
+            <b className="text-white font-bold">{activeCount}</b> agendamento(s)
           </span>
           <span>
-            <b className="text-foreground">{confirmed}</b> confirmado(s)
+            <b className="text-emerald-400 font-bold">{confirmed}</b> confirmado(s)
           </span>
           <span>
-            Previsto: <b className="text-foreground">{money(revenue)}</b>
+            Previsto: <b className="text-amber-300 font-bold">{money(revenue)}</b>
           </span>
           {view === 'week' && weekPro && (
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: weekPro.color }} /> {weekPro.name}
+            <span className="flex items-center gap-1.5 font-medium text-white">
+              <span className="h-2.5 w-2.5 rounded-full ring-1 ring-white/20" style={{ backgroundColor: weekPro.color }} /> {weekPro.name}
             </span>
           )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {LEGEND.map((s) => (
-            <span key={s} className={cn('rounded-full border px-2 py-0.5 text-[11px] font-medium', STATUS_COLOR[s])}>
+            <span key={s} className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', STATUS_COLOR[s])}>
               {STATUS_LABEL[s]}
             </span>
           ))}
-          <span className="rounded-full border border-slate-300 px-2 py-0.5 text-[11px] font-medium text-slate-600" style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(100,116,139,0.2) 0 4px, transparent 4px 8px)' }}>
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
             Bloqueio
           </span>
-          <span className="rounded-full border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Fora da jornada</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-400">
+            Fora da jornada
+          </span>
         </div>
       </div>
 
