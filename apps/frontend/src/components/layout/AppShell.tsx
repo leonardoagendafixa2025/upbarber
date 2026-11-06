@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   Bell,
@@ -94,10 +95,28 @@ export default function AppShell() {
   const { user, current, memberships, clear } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const role = current?.role;
 
   useEffect(() => setOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    // Sincroniza memberships e barbearia ativa com a API para remover dados órfãos em caso de reset
+    authApi
+      .me()
+      .then((data) => {
+        if (data?.memberships) {
+          useAuthStore.setState({ memberships: data.memberships });
+        }
+        if (data?.current && (!current || current.tenantId !== data.current.tenantId || current.tenant.slug === 'barbearia-demo')) {
+          authApi.switchTenant(data.current.tenantId).then(() => {
+            qc.invalidateQueries();
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const visible = NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.roles || (role && i.roles.includes(role)) || user?.isSuperAdmin) })).filter((g) => g.items.length);
 

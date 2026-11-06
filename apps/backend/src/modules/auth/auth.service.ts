@@ -193,7 +193,12 @@ export class AuthService {
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
     const memberships = await this.activeMemberships(user.id);
     let tenantId = stored.tenantId ?? undefined;
-    if (tenantId && !memberships.some((m) => m.tenantId === tenantId)) tenantId = memberships[0]?.tenantId;
+    if (tenantId && !memberships.some((m) => m.tenantId === tenantId)) {
+      tenantId = memberships[0]?.tenantId;
+    }
+    if (!tenantId && memberships.length > 0) {
+      tenantId = memberships[0]?.tenantId;
+    }
     return this.issueSession(user, tenantId, meta, memberships);
   }
 
@@ -212,7 +217,7 @@ export class AuthService {
   async me(auth: AuthUser) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: auth.sub } });
     const memberships = await this.activeMemberships(user.id);
-    const current = memberships.find((m) => m.tenantId === auth.tenantId);
+    const current = (auth.tenantId ? memberships.find((m) => m.tenantId === auth.tenantId) : null) ?? memberships[0] ?? null;
     const clients = await this.prisma.client.count({ where: { userId: user.id } });
     return {
       user: this.publicUser(user),
@@ -328,15 +333,42 @@ export class AuthService {
     };
   }
 
-  private activeMemberships(userId: string): Promise<MembershipWithTenant[]> {
-    return this.prisma.membership.findMany({
-      where: { userId, isActive: true, tenant: { deletedAt: null, isActive: true } },
-      include: {
-        tenant: { select: { id: true, name: true, slug: true, logoUrl: true, planStatus: true, onboardingStep: true } },
-        professional: { select: { id: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    }) as any;
+  private async activeMemberships(userId: string): Promise<MembershipWithTenant[]> {
+    const [user, list] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { isSuperAdmin: true } }),
+      this.prisma.membership.findMany({
+        where: { userId, isActive: true, tenant: { deletedAt: null, isActive: true } },
+        include: {
+          tenant: { select: { id: true, name: true, slug: true, logoUrl: true, planStatus: true, onboardingStep: true } },
+          professional: { select: { id: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    if (user?.isSuperAdmin) {
+      const existingTenantIds = new Set(list.map((m) => m.tenantId));
+      const allTenants = await this.prisma.tenant.findMany({
+        where: { deletedAt: null, isActive: true },
+        select: { id: true, name: true, slug: true, logoUrl: true, planStatus: true, onboardingStep: true },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const virtualMemberships: any[] = allTenants
+        .filter((t) => !existingTenantIds.has(t.id))
+        .map((t) => ({
+          id: `superadmin-${t.id}`,
+          tenantId: t.id,
+          role: MemberRole.OWNER,
+          professional: null,
+          permissions: null,
+          tenant: t,
+        }));
+
+      return [...list, ...virtualMemberships] as any;
+    }
+
+    return list as any;
   }
 
   private publicUser(u: User) {
