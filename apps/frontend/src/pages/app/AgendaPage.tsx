@@ -64,9 +64,43 @@ export default function AgendaPage() {
   // Horário atual no fuso
   const [nowDate, setNowDate] = useState(() => new Date());
   useEffect(() => {
-    const t = setInterval(() => setNowDate(new Date()), 30_000);
+    // Linha "agora" avança continuamente em tempo real
+    const t = setInterval(() => setNowDate(new Date()), 10_000);
     return () => clearInterval(t);
   }, []);
+
+  // Supabase Realtime / Sincronização entre abas em tempo real (Fase 4)
+  useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('upbarber_realtime_agenda');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'AGENDA_MUTATION') {
+          qc.invalidateQueries({ queryKey: ['agenda'] });
+          qc.invalidateQueries({ queryKey: ['availability'] });
+        }
+      };
+    } catch {
+      // Ignora se BroadcastChannel não suportado
+    }
+
+    return () => {
+      // Regra da Fase 4: cancela a inscrição ao sair da tela
+      if (bc) {
+        bc.close();
+      }
+    };
+  }, [qc]);
+
+  const notifyRealtime = () => {
+    try {
+      const bc = new BroadcastChannel('upbarber_realtime_agenda');
+      bc.postMessage({ type: 'AGENDA_MUTATION', timestamp: Date.now() });
+      bc.close();
+    } catch {
+      // Ignora erro
+    }
+  };
   const nowZoned = useMemo(() => zoned(nowDate, tz), [nowDate, tz]);
   const nowMinutes = nowZoned.minutes;
   const nowTimeStr = toHHMM(nowMinutes);
@@ -340,10 +374,12 @@ export default function AgendaPage() {
               professionalId: oldProId,
             });
             qc.invalidateQueries({ queryKey: ['agenda'] });
+            notifyRealtime();
             toast.success('Movimento desfeito');
           },
         });
         qc.invalidateQueries({ queryKey: ['agenda'] });
+        notifyRealtime();
       })
       .catch((err) => {
         // Reversão em caso de erro
@@ -406,10 +442,12 @@ export default function AgendaPage() {
           revert: async () => {
             await appointmentsApi.update(appt.id, { durationMinutes: oldDuration });
             qc.invalidateQueries({ queryKey: ['agenda'] });
+            notifyRealtime();
             toast.success('Redimensionamento desfeito');
           },
         });
         qc.invalidateQueries({ queryKey: ['agenda'] });
+        notifyRealtime();
       })
       .catch((err) => {
         qc.setQueriesData<AgendaData>({ queryKey: ['agenda'] }, (old) => {
@@ -430,6 +468,31 @@ export default function AgendaPage() {
         setSaveStatus('idle');
         toast.error(errorMessage(err, 'Erro ao redimensionar agendamento. Duração revertida.'));
       });
+  };
+
+  // Handlers da Seção Atenção e Encaixe Sugerido (Fase 4)
+  const handleQuickStatusChange = (id: string, nextStatus: 'CONFIRMED' | 'NO_SHOW') => {
+    appointmentsApi
+      .changeStatus(id, nextStatus)
+      .then(() => {
+        toast.success(nextStatus === 'CONFIRMED' ? 'Presença confirmada' : 'Falta registrada');
+        qc.invalidateQueries({ queryKey: ['agenda'] });
+        notifyRealtime();
+      })
+      .catch((err) => toast.error(errorMessage(err, 'Não foi possível atualizar status')));
+  };
+
+  const handleAcceptFitIn = (proId: string, time: string, duration: number) => {
+    setForm({
+      open: true,
+      appointment: null,
+      initial: {
+        date,
+        time,
+        professionalId: proId,
+        duration,
+      },
+    });
   };
 
   const dateFormattedTitle = useMemo(() => {
@@ -629,6 +692,8 @@ export default function AgendaPage() {
               nowTimeStr={nowTimeStr}
               onAppointmentClick={setDetail}
               onWhatsAppCall={(name) => toast.info(`Iniciando contato com ${name}...`)}
+              onStatusChange={handleQuickStatusChange}
+              onAcceptFitIn={handleAcceptFitIn}
             />
           )}
         </div>

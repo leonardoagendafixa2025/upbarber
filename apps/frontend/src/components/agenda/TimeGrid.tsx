@@ -892,8 +892,18 @@ export function TimeGrid({
                         </div>
 
                         {effectiveStatus === 'IN_PROGRESS' && (
-                          <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
-                            <div className="h-full rounded-full bg-amber-400 animate-pulse" style={{ width: '65%' }} />
+                          <div className="mt-1 w-full">
+                            <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,1)] transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(100, Math.max(10, Math.round(((now.minutes - effectiveStart) / Math.max(1, effectiveEnd - effectiveStart)) * 100)))}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="mt-0.5 text-right text-[10px] font-bold text-amber-300">
+                              {effectiveEnd > now.minutes ? `faltam ${effectiveEnd - now.minutes} min` : 'finalizando'}
+                            </div>
                           </div>
                         )}
 
@@ -910,6 +920,41 @@ export function TimeGrid({
                       </div>
                     );
                   })}
+
+                {/* Card tracejado "Encaixe sugerido" nos buracos da agenda (Fase 1 e 4) */}
+                {(() => {
+                  if (col.off || !col.working.length) return null;
+                  const afternoonSlot = 13 * 60; // 13:00
+                  const afternoonEnd = afternoonSlot + 45; // 13:45
+                  if (range.start > afternoonSlot || range.end < afternoonEnd) return null;
+                  const hasConflict = colData?.appts.some(
+                    (a) => a.start < afternoonEnd && a.end > afternoonSlot && a.item.status !== 'CANCELLED' && a.item.status !== 'NO_SHOW',
+                  );
+                  const hasBlock = colData?.blocks.some((b) => b.start < afternoonEnd && b.end > afternoonSlot);
+                  if (hasConflict || hasBlock) return null;
+
+                  return (
+                    <button
+                      key={`fitin-${col.key}`}
+                      type="button"
+                      onClick={() => onSlotClick(col.date, toHHMM(afternoonSlot), col.professionalId, 45)}
+                      className="group/fitin absolute inset-x-1.5 z-[4] rounded-xl border-2 border-dashed border-amber-400/40 bg-amber-400/[0.04] p-2.5 text-left shadow-sm backdrop-blur-sm transition-all hover:border-amber-400 hover:bg-amber-400/10 flex flex-col justify-between"
+                      style={{
+                        top: clampTop(afternoonSlot) + 1,
+                        height: clampH(afternoonSlot, afternoonEnd) - 2,
+                      }}
+                      title="Clique para criar encaixe sugerido"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <Zap className="h-3 w-3 text-amber-400 group-hover/fitin:animate-bounce" />
+                        <span>+ Encaixe sugerido</span>
+                      </div>
+                      <div className="text-[11px] text-zinc-400">
+                        {toHHMM(afternoonSlot)}–{toHHMM(afternoonEnd)} · 45 min
+                      </div>
+                    </button>
+                  );
+                })()}
 
                 {/* Ghost Card de Movimento Elevado (Fase 3) */}
                 {moving && moving.isDragging && moving.targetColKey === col.key && (
