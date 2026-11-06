@@ -55,6 +55,18 @@ function layout<T>(items: { item: T; start: number; end: number }[]): Placed<T>[
   return out;
 }
 
+interface DragCreateState {
+  colKey: string;
+  professionalId: string;
+  date: string;
+  anchorMin: number;
+  minMin: number;
+  maxMin: number;
+  isValid: boolean;
+  conflictReason: string;
+  pointerId: number;
+}
+
 export function TimeGrid({
   columns,
   appointments,
@@ -72,7 +84,7 @@ export function TimeGrid({
   timezone: string;
   interval: number;
   range: Interval;
-  onSlotClick: (date: string, time: string, professionalId: string) => void;
+  onSlotClick: (date: string, time: string, professionalId: string, duration?: number) => void;
   onAppointmentClick: (a: AgendaAppointment) => void;
   onBlockClick: (b: AgendaBlock) => void;
 }) {
@@ -144,8 +156,122 @@ export function TimeGrid({
   const intervalEnd = 13 * 60;
   const hasInterval = range.start <= intervalStart && range.end >= intervalEnd;
 
+  // Estado de Arraste (Fase 2)
+  const [drag, setDrag] = useState<DragCreateState | null>(null);
+  const colRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const handlePointerDown = (e: React.PointerEvent, col: GridColumn, m: number) => {
+    if (e.button !== 0) return; // apenas clique primário
+    // Não permite iniciar arraste fora da jornada ou no intervalo
+    const isWorkingSlot = !col.off && inWorking(col, m) && !(m >= intervalStart && m < intervalEnd);
+    if (!isWorkingSlot) return;
+
+    // Não permite iniciar em cima de um bloqueio existente
+    const colBlocks = perColumn.get(col.key)?.blocks ?? [];
+    if (colBlocks.some((b) => b.start <= m && m < b.end)) return;
+
+    // Não permite iniciar em cima de um agendamento existente
+    const colAppts = perColumn.get(col.key)?.appts ?? [];
+    if (colAppts.some((a) => a.start <= m && m < a.end && a.item.status !== 'CANCELLED' && a.item.status !== 'NO_SHOW')) {
+      return;
+    }
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignora erro de captura se não suportado
+    }
+
+    setDrag({
+      colKey: col.key,
+      professionalId: col.professionalId,
+      date: col.date,
+      anchorMin: m,
+      minMin: m,
+      maxMin: m + 15,
+      isValid: true,
+      conflictReason: '',
+      pointerId: e.pointerId,
+    });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent, col: GridColumn) => {
+    if (!drag || drag.colKey !== col.key) return;
+
+    const colEl = colRefs.current.get(col.key);
+    if (!colEl) return;
+
+    const rect = colEl.getBoundingClientRect();
+    const relY = Math.max(0, Math.min(height, e.clientY - rect.top));
+    const currentM = range.start + relY / ppm;
+    const snappedM = Math.round(currentM / 15) * 15;
+
+    let minM = Math.min(drag.anchorMin, snappedM);
+    let maxM = Math.max(drag.anchorMin, snappedM);
+    if (maxM - minM < 15) {
+      maxM = minM + 15;
+    }
+
+    let isValid = true;
+    let conflictReason = '';
+
+    // 1. Validação de Intervalo
+    if (maxM > intervalStart && minM < intervalEnd) {
+      isValid = false;
+      conflictReason = 'Horário de intervalo';
+    }
+
+    // 2. Validação de Expediente
+    if (isValid && (!inWorking(col, minM) || !inWorking(col, maxM - 1))) {
+      isValid = false;
+      conflictReason = 'Fora do expediente';
+    }
+
+    // 3. Validação de Conflito com outros agendamentos
+    if (isValid) {
+      const colAppts = perColumn.get(col.key)?.appts ?? [];
+      const hasConflict = colAppts.some(({ item: a, start, end }) => {
+        if (a.status === 'CANCELLED' || a.status === 'NO_SHOW') return false;
+        return start < maxM && end > minM;
+      });
+      if (hasConflict) {
+        isValid = false;
+        conflictReason = 'Conflito de horário';
+      }
+    }
+
+    // 4. Validação com Bloqueios
+    if (isValid) {
+      const colBlocks = perColumn.get(col.key)?.blocks ?? [];
+      const hasBlockConflict = colBlocks.some(({ start, end }) => start < maxM && end > minM);
+      if (hasBlockConflict) {
+        isValid = false;
+        conflictReason = 'Horário bloqueado';
+      }
+    }
+
+    setDrag((prev) => (prev ? { ...prev, minMin: minM, maxMin: maxM, isValid, conflictReason } : null));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!drag) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(drag.pointerId);
+    } catch {
+      // Ignora erro de liberação de captura
+    }
+
+    if (drag.isValid) {
+      const duration = drag.maxMin - drag.minMin;
+      onSlotClick(drag.date, toHHMM(drag.minMin), drag.professionalId, duration);
+    }
+
+    setDrag(null);
+  };
+
   return (
-    <div ref={scrollRef} className="relative max-h-[calc(100vh-13rem)] min-h-[500px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin">
+    <div ref={scrollRef} className="relative max-h-[calc(100vh-13rem)] min-h-[500px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin select-none">
       <div className="flex min-w-fit w-full">
         {/* coluna de horas */}
         <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-white/10 bg-[#0d0d12]/95 backdrop-blur-md">
@@ -191,28 +317,40 @@ export function TimeGrid({
               </div>
 
               {/* corpo da grade */}
-              <div className="relative" style={{ height }}>
+              <div
+                ref={(el) => {
+                  if (el) colRefs.current.set(col.key, el);
+                  else colRefs.current.delete(col.key);
+                }}
+                onPointerMove={(e) => handlePointerMove(e, col)}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={() => setDrag(null)}
+                className="relative touch-none"
+                style={{ height }}
+              >
                 {rows.map((m, i) => {
-                  const working = !col.off && inWorking(col, m);
+                  const isWorkingSlot = !col.off && inWorking(col, m) && !(m >= intervalStart && m < intervalEnd);
+
                   return (
-                    <button
+                    <div
                       key={m}
-                      type="button"
-                      onClick={() => onSlotClick(col.date, toHHMM(m), col.professionalId)}
+                      onPointerDown={(e) => isWorkingSlot && handlePointerDown(e, col, m)}
                       className={cn(
                         'group absolute inset-x-0 block border-t text-left transition-colors',
                         m % 60 === 0 ? 'border-white/10' : 'border-dashed border-white/5',
-                        working
-                          ? 'bg-transparent hover:bg-white/[0.03]'
-                          : 'bg-black/50 hover:bg-black/70 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.015)_0_8px,transparent_8px_16px)]',
+                        isWorkingSlot
+                          ? 'bg-transparent hover:bg-white/[0.04] cursor-crosshair'
+                          : 'bg-black/60 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.015)_0_8px,transparent_8px_16px)] cursor-not-allowed opacity-60',
                       )}
                       style={{ top: i * rowH, height: rowH }}
-                      title={`${toHHMM(m)}${working ? '' : ' (fora da jornada)'}`}
+                      title={`${toHHMM(m)}${isWorkingSlot ? ' (arraste para agendar)' : ' (indisponível)'}`}
                     >
-                      <span className="hidden pl-2 text-[10px] font-bold text-amber-400 group-hover:inline">
-                        + {toHHMM(m)}
-                      </span>
-                    </button>
+                      {isWorkingSlot && (
+                        <span className="hidden pl-2 text-[10px] font-bold text-amber-400 group-hover:inline">
+                          + {toHHMM(m)}
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
 
@@ -264,11 +402,9 @@ export function TimeGrid({
                     const timeRange = `${toHHMM(start)}–${toHHMM(end)}`;
                     const priceFormatted = a.totalPrice ? money(Number(a.totalPrice)) : 'R$ 45';
 
-                    // Detecta se está atrasado: horário já começou e ainda não fez check-in nem foi concluído
                     const isDelayed = a.status === 'SCHEDULED' && start < now.minutes && !a.checkedInAt;
                     const effectiveStatus = isDelayed ? 'DELAYED' : a.status;
 
-                    // Estilos e ícones por status fiel à referência
                     let cardBg = 'bg-[#121216]/95 border-white/10';
                     let statusLabelText = 'Finalizado';
                     let statusTextColor = 'text-zinc-400';
@@ -322,7 +458,6 @@ export function TimeGrid({
                           }}
                         >
                           <div className="w-full">
-                            {/* Linha 1: Nome do cliente + Ícone à direita */}
                             <div className="flex items-center justify-between gap-1">
                               <span className="truncate font-bold text-white text-xs tracking-tight">
                                 {name}
@@ -334,12 +469,10 @@ export function TimeGrid({
                               </div>
                             </div>
 
-                            {/* Linha 2: Serviço · Horário */}
                             <div className="truncate text-[11px] text-zinc-300 mt-0.5">
                               {services} <span className="text-zinc-400">· {timeRange}</span>
                             </div>
 
-                            {/* Linha 3: Valor · Status */}
                             <div className="truncate text-[11px] mt-0.5">
                               <span className="font-semibold text-zinc-200">{priceFormatted}</span>
                               <span className="text-zinc-500"> · </span>
@@ -347,7 +480,6 @@ export function TimeGrid({
                             </div>
                           </div>
 
-                          {/* Barra de progresso para quem está Em Atendimento */}
                           {effectiveStatus === 'IN_PROGRESS' && (
                             <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
                               <div className="h-full rounded-full bg-amber-400 animate-pulse" style={{ width: '65%' }} />
@@ -358,6 +490,52 @@ export function TimeGrid({
                     );
                   })}
 
+                {/* Ghost Card de Criação por Arraste (Fase 2) */}
+                {drag && drag.colKey === col.key && (
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute inset-x-1.5 z-30 rounded-xl border-2 border-dashed flex flex-col justify-between p-2.5 shadow-2xl transition-all duration-75',
+                      drag.isValid
+                        ? 'border-sky-400 bg-sky-500/25 shadow-sky-500/20 backdrop-blur-sm'
+                        : 'border-red-500 bg-red-500/25 shadow-red-500/20 backdrop-blur-sm',
+                    )}
+                    style={{
+                      top: clampTop(drag.minMin),
+                      height: Math.max(36, (drag.maxMin - drag.minMin) * ppm),
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold shadow-lg',
+                          drag.isValid
+                            ? 'bg-sky-500 text-black shadow-sky-500/30'
+                            : 'bg-red-500 text-white shadow-red-500/30',
+                        )}
+                      >
+                        {drag.isValid ? (
+                          <>
+                            <span>{drag.maxMin - drag.minMin} min</span>
+                            <span className="text-black/70">· {toHHMM(drag.minMin)} às {toHHMM(drag.maxMin)}</span>
+                          </>
+                        ) : (
+                          <span>⚠️ {drag.conflictReason}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Faixa hachurada de tempo de preparo / limpeza */}
+                    {drag.isValid && (
+                      <div
+                        className="mt-auto h-2 w-full rounded border-t border-amber-400/50"
+                        style={{
+                          backgroundImage: 'repeating-linear-gradient(45deg, rgba(245,158,11,0.5) 0 4px, transparent 4px 8px)',
+                        }}
+                        title="Tempo de preparo / limpeza"
+                      />
+                    )}
+                  </div>
+                )}
 
                 {/* Linha dourada "Agora" com ponto âmbar */}
                 {col.isToday && now.minutes >= range.start && now.minutes <= range.end && (

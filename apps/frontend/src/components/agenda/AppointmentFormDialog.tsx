@@ -21,6 +21,7 @@ export interface AppointmentFormInitial {
   time?: string;
   professionalId?: string;
   client?: ClientPick | null;
+  duration?: number;
 }
 
 export function AppointmentFormDialog({
@@ -181,6 +182,16 @@ export function AppointmentFormDialog({
             if (canSave) save.mutate();
           }}
         >
+          {initial.duration && !editing && (
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs text-sky-200 flex items-center justify-between shadow-sm">
+              <span className="font-medium">
+                Horário selecionado no arraste: <b className="text-white">{initial.time}</b> ({initial.duration} min)
+              </span>
+              <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+                Snap 15m
+              </span>
+            </div>
+          )}
           <Field label="Cliente" hint={!client ? 'Opcional — deixe vazio para horário sem cliente identificado' : undefined}>
             <ClientSearch value={client} onChange={setClient} />
           </Field>

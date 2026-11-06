@@ -254,8 +254,8 @@ export default function AgendaPage() {
   const step = view === 'day' ? 1 : 7;
   const go = (n: number) => setParam({ date: toISODate(addDays(fromISODate(date), n * step)) });
 
-  const openNew = (d = date, time?: string, proId?: string) =>
-    setForm({ open: true, appointment: null, initial: { date: d, time, professionalId: proId || professionalId || weekPro?.id || undefined } });
+  const openNew = (d = date, time?: string, proId?: string, duration?: number) =>
+    setForm({ open: true, appointment: null, initial: { date: d, time, professionalId: proId || professionalId || weekPro?.id || undefined, duration } });
 
   const dateFormattedTitle = useMemo(() => {
     if (view === 'day') {
@@ -415,7 +415,7 @@ export default function AgendaPage() {
               timezone={tz}
               interval={interval}
               range={range}
-              onSlotClick={(d, time, proId) => openNew(d, time, proId)}
+              onSlotClick={(d, time, proId, duration) => openNew(d, time, proId, duration)}
               onAppointmentClick={setDetail}
               onBlockClick={setBlockToRemove}
             />
