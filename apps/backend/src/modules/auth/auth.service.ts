@@ -156,7 +156,27 @@ export class AuthService {
   async switchTenant(userId: string, tenantId: string, meta?: { ip?: string; userAgent?: string }) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const memberships = await this.activeMemberships(userId);
-    if (!memberships.some((m) => m.tenantId === tenantId)) {
+    const target = memberships.find((m) => m.tenantId === tenantId);
+    if (!target) {
+      if (user.isSuperAdmin) {
+        const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+        const virtualMembership: any = {
+          id: `superadmin-${tenant.id}`,
+          tenantId: tenant.id,
+          role: MemberRole.OWNER,
+          professional: null,
+          permissions: null,
+          tenant: {
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+            logoUrl: tenant.logoUrl,
+            planStatus: tenant.planStatus,
+            onboardingStep: tenant.onboardingStep,
+          },
+        };
+        return this.issueSession(user, tenantId, meta, [virtualMembership, ...memberships]);
+      }
       throw new UnauthorizedException('Você não tem acesso a esta barbearia');
     }
     return this.issueSession(user, tenantId, meta, memberships);

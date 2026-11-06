@@ -163,6 +163,24 @@ export default function AppShell() {
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
+          {user?.isSuperAdmin && (
+            <div className="flex items-center justify-between border-b border-[#c9a227]/30 bg-gray-950 px-4 py-2 text-xs text-white shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded border border-[#c9a227]/50 bg-[#c9a227]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#f0cc66]">
+                  MODO SUPERADMIN
+                </span>
+                <span className="hidden text-gray-300 sm:inline">
+                  Gerenciando barbearia: <strong className="text-white">{current?.tenant.name ?? 'Nenhuma selecionada'}</strong>
+                </span>
+              </div>
+              <Link
+                to="/admin/barbearias"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#c9a227] px-2.5 py-1 text-xs font-semibold text-black transition-colors hover:bg-[#f0cc66]"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> Voltar ao SuperAdmin
+              </Link>
+            </div>
+          )}
           <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)}>
               <Menu className="h-5 w-5" />

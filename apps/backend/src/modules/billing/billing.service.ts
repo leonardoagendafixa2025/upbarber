@@ -30,7 +30,7 @@ export class BillingService {
   constructor(private prisma: PrismaService, private config: ConfigService, private messaging: MessagingService) {}
 
   get enabled() {
-    return !!(this.config.get('CREATIVE_PAY_BASE_URL') && this.config.get('CREATIVE_PAY_API_KEY'));
+    return !!((this.config.get('CREATIVE_PAY_BASE_URL') || process.env.CREATIVE_PAY_BASE_URL) && (this.config.get('CREATIVE_PAY_API_KEY') || process.env.CREATIVE_PAY_API_KEY));
   }
 
   // ---------------- plano da barbearia ----------------

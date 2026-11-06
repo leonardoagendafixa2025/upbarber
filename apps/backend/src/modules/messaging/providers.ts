@@ -15,12 +15,12 @@ export class EmailProvider {
   constructor(private config: ConfigService) {}
 
   get enabled() {
-    return !!this.config.get('RESEND_API_KEY');
+    return !!(this.config.get('RESEND_API_KEY') || process.env.RESEND_API_KEY);
   }
 
   async send(to: string, subject: string, html: string, text?: string): Promise<SendResult> {
-    const apiKey = this.config.get<string>('RESEND_API_KEY');
-    const from = this.config.get<string>('FROM_EMAIL') || 'Connect Barber <noreply@creativenext.cloud>';
+    const apiKey = this.config.get<string>('RESEND_API_KEY') || process.env.RESEND_API_KEY;
+    const from = this.config.get<string>('FROM_EMAIL') || process.env.FROM_EMAIL || 'UP BARBER <noreply@upbarber.com.br>';
     if (!apiKey) {
       this.logger.debug(`[simulado] e-mail para ${to}: ${subject}`);
       return { ok: false, error: 'RESEND_API_KEY não configurada' };
@@ -47,13 +47,13 @@ export class WhatsAppProvider {
   constructor(private config: ConfigService) {}
 
   get enabled() {
-    return !!(this.config.get('EVOLUTION_API_URL') && this.config.get('EVOLUTION_API_KEY'));
+    return !!((this.config.get('EVOLUTION_API_URL') || process.env.EVOLUTION_API_URL) && (this.config.get('EVOLUTION_API_KEY') || process.env.EVOLUTION_API_KEY));
   }
 
   async send(phone: string, text: string): Promise<SendResult> {
-    const base = (this.config.get<string>('EVOLUTION_API_URL') || '').replace(/\/$/, '');
-    const key = this.config.get<string>('EVOLUTION_API_KEY');
-    const instance = this.config.get<string>('EVOLUTION_INSTANCE_NAME') || 'CREATIVELABS';
+    const base = (this.config.get<string>('EVOLUTION_API_URL') || process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
+    const key = this.config.get<string>('EVOLUTION_API_KEY') || process.env.EVOLUTION_API_KEY;
+    const instance = this.config.get<string>('EVOLUTION_INSTANCE_NAME') || process.env.EVOLUTION_INSTANCE_NAME || 'UPBARBER';
     if (!base || !key) {
       this.logger.debug(`[simulado] whatsapp para ${phone}: ${text.slice(0, 60)}...`);
       return { ok: false, error: 'Evolution API não configurada' };
