@@ -50,7 +50,7 @@ export class KioskService {
       coverUrl: t.coverUrl,
       timezone: t.timezone,
       maxAdvanceDays: t.maxAdvanceDays,
-      payments: { pix: this.payments.hasCreativePay(t), pos: this.payments.hasPos(t), counter: true },
+      payments: { pix: await this.payments.hasOnlinePayment(t), pos: this.payments.hasPos(t), counter: true },
       services,
       professionals,
     };

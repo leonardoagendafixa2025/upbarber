@@ -61,8 +61,10 @@ export class PublicService {
       openingHours: t.openingHours,
       timezone: t.timezone,
       onlineBookingEnabled: t.onlineBookingEnabled && !blocked,
-      onlinePaymentEnabled: this.payments.hasCreativePay(t),
-      requirePrepayment: t.requirePrepayment && this.payments.hasCreativePay(t),
+      onlinePaymentEnabled: t.onlinePaymentEnabled,
+      requirePrepayment: t.requirePrepayment && t.onlinePaymentEnabled,
+      allowCounterPayment: t.allowCounterPayment,
+      defaultOnlineProvider: t.defaultOnlineProvider,
       kioskEnabled: t.kioskEnabled,
       cancelLimitHours: t.cancelLimitHours,
       minAdvanceMin: t.minAdvanceMin,
@@ -116,13 +118,27 @@ export class PublicService {
       user ? 'CLIENT' : 'SITE',
     );
 
-    let payment: { intentId: string; checkoutUrl: string | null; amount: number } | null = null;
+    let payment: { intentId: string; checkoutUrl: string | null; qrCode?: string | null; copyPaste?: string | null; amount: number } | null = null;
     if (wantsOnline) {
       const client = await this.prisma.client.findUniqueOrThrow({ where: { id: clientId! } });
       const amount = Number(r.appointment.totalPrice);
       const returnUrl = dto.returnUrl || `${this.messaging.appUrl()}/b/${t.slug}/agendar?pago=${r.appointment.id}`;
-      const intent = await this.payments.createCharge(t, { kind: 'HOSTED', amount, appointmentId: r.appointment.id, clientId: client.id, description: `Agendamento ${dto.date} ${dto.time}`, returnUrl, customer: client });
-      payment = { intentId: intent.id, checkoutUrl: intent.checkoutUrl, amount };
+      const intent = await this.payments.createCharge(t, {
+        kind: (dto as any).paymentKind === 'CREDIT_CARD' ? 'HOSTED' : 'PIX',
+        amount,
+        appointmentId: r.appointment.id,
+        clientId: client.id,
+        description: `Agendamento ${dto.date} ${dto.time}`,
+        returnUrl,
+        customer: client,
+      });
+      payment = {
+        intentId: intent.id,
+        checkoutUrl: intent.checkoutUrl,
+        qrCode: intent.qrCode,
+        copyPaste: intent.copyPaste,
+        amount,
+      };
     }
     return {
       appointment: this.publicAppointment(r.appointment),

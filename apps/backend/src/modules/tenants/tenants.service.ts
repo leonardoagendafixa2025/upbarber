@@ -13,19 +13,26 @@ export class TenantsService {
 
   async get(tenantId: string) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
-    const [professionals, services, clients] = await Promise.all([
+    const [professionals, services, clients, connections] = await Promise.all([
       this.prisma.professional.count({ where: { tenantId, isActive: true, deletedAt: null } }),
       this.prisma.service.count({ where: { tenantId, isActive: true, deletedAt: null } }),
       this.prisma.client.count({ where: { tenantId, deletedAt: null } }),
+      this.prisma.paymentConnection.findMany({ where: { tenantId } }),
     ]);
+    const mpConn = connections.find((c) => c.provider === 'MERCADO_PAGO' && c.status === 'CONNECTED');
+    const abacateConn = connections.find((c) => c.provider === 'ABACATEPAY' && c.status === 'CONNECTED');
     return {
       ...t,
       counts: { professionals, services, clients },
       plan: this.planInfo(t),
       integrations: {
-        creativePay: !!t.cpApiKey,
-        creativePayLast4: t.cpApiKey ? t.cpApiKey.slice(-4) : null,
-        creativePayWebhookSecret: !!t.cpWebhookSecret,
+        mercadoPago: !!mpConn,
+        mercadoPagoAccount: mpConn?.accountName ?? null,
+        abacatePay: !!abacateConn,
+        abacatePayAccount: abacateConn?.accountName ?? null,
+        creativePay: false,
+        creativePayLast4: null,
+        creativePayWebhookSecret: false,
         pos: !!t.posAccessToken && !!t.posDeviceId,
         posDeviceId: t.posDeviceId,
         kioskToken: t.kioskToken,

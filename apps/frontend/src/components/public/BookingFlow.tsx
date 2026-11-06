@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
 import { toast } from 'sonner';
-import { ArrowLeft, CalendarPlus, Check, CheckCircle2, ChevronRight, Clock, MessageCircle, Scissors, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, Check, CheckCircle2, ChevronRight, Clock, Copy, MessageCircle, QrCode, Scissors, UserPlus, Users } from 'lucide-react';
 import { Avatar, Button, Dialog, DialogContent, DialogFooter, EmptyState, Field, Input, Skeleton, Textarea } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 import { fmtDate, fmtDateLong, fmtTime, fromISODate, minutes, money, toISODate, WEEKDAYS_SHORT, whatsappLink } from '@/lib/utils/format';
@@ -118,7 +118,17 @@ export default function BookingFlow({ shop }: { shop: PublicBarbershop }) {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [result, setResult] = useState<{ appointment: BookedAppointment; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    appointment: BookedAppointment;
+    message: string;
+    payment?: {
+      intentId: string;
+      checkoutUrl: string | null;
+      qrCode?: string | null;
+      copyPaste?: string | null;
+      amount: number;
+    } | null;
+  } | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   useEffect(() => {
@@ -198,6 +208,7 @@ export default function BookingFlow({ shop }: { shop: PublicBarbershop }) {
   // ---------- pagamento ----------
   const canPayOnline = !!shop.onlinePaymentEnabled;
   const [payMethod, setPayMethod] = useState<'ONLINE' | 'COUNTER'>(shop.requirePrepayment ? 'ONLINE' : 'COUNTER');
+  const [paymentKind, setPaymentKind] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
 
   // ---------- agendamento ----------
   const book = useMutation({
@@ -212,12 +223,13 @@ export default function BookingFlow({ shop }: { shop: PublicBarbershop }) {
           : { name: name.trim(), phone: onlyDigits(phone), email: email.trim() || undefined }),
         notes: notes.trim() || undefined,
         payment: canPayOnline ? payMethod : undefined,
+        paymentKind: canPayOnline && payMethod === 'ONLINE' ? paymentKind : undefined,
         returnUrl: canPayOnline && payMethod === 'ONLINE' ? `${window.location.origin}/b/${slug}/agendar?pago=1` : undefined,
       }),
     onSuccess: (r) => {
       setResult(r);
       clearDraft(slug);
-      if (r.payment?.checkoutUrl) {
+      if (r.payment?.checkoutUrl && !r.payment?.qrCode) {
         toast.success('Redirecionando para o pagamento…');
         window.location.href = r.payment.checkoutUrl;
         return;
@@ -300,6 +312,47 @@ export default function BookingFlow({ shop }: { shop: PublicBarbershop }) {
           </div>
           <h2 className="mt-4 text-xl font-bold">{a.status === 'CONFIRMED' ? 'Agendamento confirmado!' : 'Agendamento recebido!'}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{result.message}</p>
+
+          {result.payment?.qrCode && (
+            <div className="mt-6 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-5 text-center">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 text-xs font-bold mb-3">
+                <QrCode className="h-3.5 w-3.5" /> PAGAMENTO VIA PIX
+              </div>
+              <h3 className="font-bold text-base text-gray-900">Escaneie o QR Code para pagar</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Valor do sinal: <strong className="text-gray-900 font-bold">{money(result.payment.amount)}</strong>
+              </p>
+
+              <div className="my-4 flex justify-center">
+                <img
+                  src={
+                    result.payment.qrCode.startsWith('data:')
+                      ? result.payment.qrCode
+                      : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(result.payment.qrCode)}`
+                  }
+                  alt="QR Code Pix"
+                  className="h-48 w-48 rounded-xl border bg-white p-2 shadow-md"
+                />
+              </div>
+
+              <div className="space-y-2 max-w-sm mx-auto">
+                <Button
+                  type="button"
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold shadow"
+                  onClick={() => {
+                    navigator.clipboard.writeText(result.payment!.qrCode!);
+                    toast.success('Código Pix Copia e Cola copiado!');
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Código Pix
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  Após o pagamento no app do seu banco, o agendamento é confirmado automaticamente!
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 space-y-2 rounded-xl bg-gray-50 p-4 text-left text-sm">
             <Row label="Quando" value={<span className="capitalize">{when}</span>} />
             {profName && <Row label="Profissional" value={profName} />}
@@ -618,6 +671,34 @@ export default function BookingFlow({ shop }: { shop: PublicBarbershop }) {
                   </button>
                 )}
               </div>
+              {payMethod === 'ONLINE' && (
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentKind('PIX')}
+                    className={cn(
+                      'flex-1 rounded-lg border p-2 text-xs font-semibold transition-all',
+                      paymentKind === 'PIX'
+                        ? 'border-gold-500 bg-gold-50 text-gold-900 ring-1 ring-gold-500'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300',
+                    )}
+                  >
+                    ⚡ Pix Instantâneo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentKind('CREDIT_CARD')}
+                    className={cn(
+                      'flex-1 rounded-lg border p-2 text-xs font-semibold transition-all',
+                      paymentKind === 'CREDIT_CARD'
+                        ? 'border-gold-500 bg-gold-50 text-gold-900 ring-1 ring-gold-500'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300',
+                    )}
+                  >
+                    💳 Cartão de Crédito
+                  </button>
+                </div>
+              )}
               {shop.requirePrepayment && <p className="text-xs text-muted-foreground">Esta barbearia confirma o horário somente após o pagamento.</p>}
             </div>
           )}

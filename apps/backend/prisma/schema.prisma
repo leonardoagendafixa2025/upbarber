@@ -155,8 +155,10 @@ model Tenant {
   autoConfirm       Boolean @default(true) // agendamentos online nascem CONFIRMED
   requirePrepayment Boolean @default(false)
 
-  // Pagamento online (CreativePay da própria barbearia), totem e maquininha
+  // Pagamento online (Mercado Pago OAuth + AbacatePay), totem e maquininha
   onlinePaymentEnabled Boolean @default(false)
+  defaultOnlineProvider String? @default("MERCADO_PAGO") // MERCADO_PAGO | ABACATEPAY
+  allowCounterPayment   Boolean @default(true) // permitir pagamento presencial no balcão
   cpApiKey             String?
   cpWebhookSecret      String?
   kioskEnabled         Boolean @default(false)
@@ -221,6 +223,9 @@ model Tenant {
   returnRules          ReturnRule[]
   invoices             Invoice[]
   auditLogs            AuditLog[]
+  paymentConnections   PaymentConnection[]
+  paymentTransactions  PaymentTransaction[]
+  paymentWebhookEvents PaymentWebhookEvent[]
 
   @@index([slug])
   @@map("tenants")
@@ -439,6 +444,7 @@ model Client {
   campaignRecipients  CampaignRecipient[]
   waitlist            WaitlistEntry[]
   surveys             SatisfactionSurvey[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([tenantId, phone])
   @@index([tenantId, name])
@@ -511,6 +517,7 @@ model Appointment {
 
   services AppointmentService[]
   survey   SatisfactionSurvey?
+  paymentTransactions PaymentTransaction[]
 
   createdById String?
   createdAt   DateTime  @default(now())
@@ -624,6 +631,7 @@ model Order {
   clientPackages      ClientPackage[]
   survey              SatisfactionSurvey?
   paymentIntents      PaymentIntent[]
+  paymentTransactions PaymentTransaction[]
 
   @@unique([tenantId, number])
   @@index([tenantId, openedAt])
@@ -1445,4 +1453,121 @@ model PlatformSetting {
 
   @@map("platform_settings")
 }
+
+// =====================================================================
+// PAYMENT MANAGER MULTI-TENANT (MERCADO PAGO OAUTH + ABACATEPAY)
+// =====================================================================
+
+enum PaymentProvider {
+  MERCADO_PAGO
+  ABACATEPAY
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+  ERROR
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  REFUNDED
+}
+
+enum OnlinePaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  OTHER
+}
+
+model PaymentConnection {
+  id                     String           @id @default(uuid())
+  tenantId               String
+  tenant                 Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider               PaymentProvider
+  providerAccountId      String?
+  accountName            String?
+  accountEmail           String?
+  accessTokenEncrypted   String?          @db.Text
+  refreshTokenEncrypted  String?          @db.Text
+  publicKey              String?
+  apiKeyEncrypted        String?          @db.Text
+  webhookSecretEncrypted String?          @db.Text
+  tokenExpiresAt         DateTime?
+  status                 ConnectionStatus @default(CONNECTED)
+  connectedAt            DateTime         @default(now())
+  lastValidatedAt        DateTime?
+  metadata               Json?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  transactions PaymentTransaction[]
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+  @@map("payment_connections")
+}
+
+model PaymentTransaction {
+  id                String              @id @default(uuid())
+  tenantId          String
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connectionId      String?
+  connection        PaymentConnection?  @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  appointmentId     String?
+  appointment       Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  orderId           String?
+  order             Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  clientId          String?
+  client            Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  provider          PaymentProvider
+  providerPaymentId String?
+  amountCents       Int
+  currency          String              @default("BRL")
+  paymentMethod     OnlinePaymentMethod @default(PIX)
+  status            TransactionStatus   @default(PENDING)
+  paymentUrl        String?             @db.Text
+  qrCode            String?             @db.Text
+  qrCodeBase64      String?             @db.Text
+  externalReference String?
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  metadata          Json?
+  idempotencyKey    String?             @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  webhookEvents PaymentWebhookEvent[]
+
+  @@index([tenantId])
+  @@index([providerPaymentId])
+  @@index([appointmentId])
+  @@index([orderId])
+  @@map("payment_transactions")
+}
+
+model PaymentWebhookEvent {
+  id               String              @id @default(uuid())
+  tenantId         String?
+  tenant           Tenant?             @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  provider         PaymentProvider
+  eventId          String?
+  transactionId    String?
+  transaction      PaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  processingStatus String              @default("RECEIVED") // RECEIVED | PROCESSED | FAILED | IGNORED
+  receivedAt       DateTime            @default(now())
+  processedAt      DateTime?
+  errorMessage     String?             @db.Text
+  rawPayload       Json?
+
+  @@index([tenantId])
+  @@index([provider, eventId])
+  @@map("payment_webhook_events")
+}
+
 

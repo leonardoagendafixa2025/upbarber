@@ -105,6 +105,7 @@ export interface BookingPayload {
   email?: string;
   notes?: string;
   payment?: 'ONLINE' | 'COUNTER';
+  paymentKind?: 'PIX' | 'CREDIT_CARD';
   returnUrl?: string;
 }
 
@@ -148,7 +149,19 @@ export const publicApi = {
       })
       .then((r) => r.data),
   book: (slug: string, payload: BookingPayload) =>
-    api.post<{ appointment: BookedAppointment; message: string; payment: { intentId: string; checkoutUrl: string | null; amount: number } | null }>(`/public/barbershops/${slug}/book`, payload).then((r) => r.data),
+    api
+      .post<{
+        appointment: BookedAppointment;
+        message: string;
+        payment: {
+          intentId: string;
+          checkoutUrl: string | null;
+          qrCode?: string | null;
+          copyPaste?: string | null;
+          amount: number;
+        } | null;
+      }>(`/public/barbershops/${slug}/book`, payload)
+      .then((r) => r.data),
   waitlist: (slug: string, payload: WaitlistPayload) => api.post(`/public/barbershops/${slug}/waitlist`, payload).then((r) => r.data),
   survey: (token: string) => api.get<PublicSurvey>(`/public/surveys/${token}`).then((r) => r.data),
   answerSurvey: (token: string, payload: { rating: number; comment?: string }) => api.post(`/public/surveys/${token}`, payload).then((r) => r.data),

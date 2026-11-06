@@ -4,9 +4,10 @@ import { PageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from '@/componen
 import { EntriesTab } from '@/components/finance/EntriesTab';
 import { CashflowTab } from '@/components/finance/CashflowTab';
 import { CategoriesTab } from '@/components/finance/CategoriesTab';
+import { OnlineTransactionsTab } from '@/components/finance/OnlineTransactionsTab';
 import { financeApi } from '@/lib/api/finance';
 
-const TABS = ['pagar', 'receber', 'fluxo', 'categorias'];
+const TABS = ['pagar', 'receber', 'online', 'fluxo', 'categorias'];
 
 export default function FinancePage() {
   const [params, setParams] = useSearchParams();
@@ -15,11 +16,12 @@ export default function FinancePage() {
 
   return (
     <div>
-      <PageHeader title="Financeiro" description="Contas a pagar e a receber, fluxo de caixa e categorias." />
+      <PageHeader title="Financeiro" description="Contas a pagar e a receber, recebimentos online, fluxo de caixa e categorias." />
       <Tabs value={tab} onValueChange={(v) => setParams({ aba: v }, { replace: true })}>
         <TabsList>
           <TabsTrigger value="pagar">Contas a pagar</TabsTrigger>
           <TabsTrigger value="receber">Contas a receber</TabsTrigger>
+          <TabsTrigger value="online">Pagamentos Online</TabsTrigger>
           <TabsTrigger value="fluxo">Fluxo de caixa</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
         </TabsList>
@@ -28,6 +30,9 @@ export default function FinancePage() {
         </TabsContent>
         <TabsContent value="receber">
           <EntriesTab type="INCOME" categories={categories} />
+        </TabsContent>
+        <TabsContent value="online">
+          <OnlineTransactionsTab />
         </TabsContent>
         <TabsContent value="fluxo">
           <CashflowTab />

@@ -353,7 +353,7 @@ function AppointmentPaymentScreen({ cfg, appointment, api, onStarted }: { cfg: K
   return <div className="flex flex-1 flex-col gap-5"><div><div className="text-2xl font-bold">Agendamento realizado</div><div className="text-sm text-white/60">{appointment.date} às {appointment.time} · {money(appointment.totalPrice)}</div></div>
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5"><div className="font-semibold">{appointment.services.join(', ')}</div><div className="mt-1 text-sm text-white/60">com {appointment.professional}</div></div>
     <div className="text-lg font-semibold">Como deseja pagar?</div>{pay.error && <div className="rounded-lg bg-red-500/20 px-4 py-2 text-sm text-red-200">{errorMessage(pay.error)}</div>}
-    {cfg.payments.pix && <Tile icon={QrCode} title="Pagar agora com Pix" text="Gerar QR code CreativePay e confirmar automaticamente" onClick={() => pay.mutate('PIX')} disabled={pay.isPending} big />}
+    {cfg.payments.pix && <Tile icon={QrCode} title="Pagar agora com Pix" text="Gerar QR code Pix e confirmar automaticamente" onClick={() => pay.mutate('PIX')} disabled={pay.isPending} big />}
     <Tile icon={Store} title="Pagar presencialmente" text="Confirmar o agendamento e pagar na barbearia" onClick={() => pay.mutate('COUNTER')} disabled={pay.isPending} big />
   </div>;
 }
