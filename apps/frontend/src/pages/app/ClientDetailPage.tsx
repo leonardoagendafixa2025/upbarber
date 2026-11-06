@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CalendarCheck, CalendarPlus, Coins, MessageCircle, Package, Pencil, Receipt, Star, Trash2, TrendingUp, UserX } from 'lucide-react';
@@ -101,6 +101,30 @@ export default function ClientDetailPage() {
 
   const firstName = c.name.split(' ')[0];
 
+  const effectiveTotalSpent = useMemo(() => {
+    const raw = Number(c.totalSpent || 0);
+    const fromHistory = (h?.appointments ?? [])
+      .filter((a) => a.status === 'COMPLETED')
+      .reduce((sum, a) => sum + Number(a.totalPrice || 0), 0);
+    const fromOrders = (h?.orders ?? [])
+      .filter((o) => o.status === 'CLOSED')
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+    return Math.max(raw, fromHistory + fromOrders, fromHistory);
+  }, [c.totalSpent, h?.appointments, h?.orders]);
+
+  const effectiveVisitsCount = useMemo(() => {
+    const raw = Number(c.visitsCount || 0);
+    const fromHistory = (h?.appointments ?? []).filter((a) => a.status === 'COMPLETED').length;
+    const fromOrders = (h?.orders ?? []).filter((o) => o.status === 'CLOSED').length;
+    return Math.max(raw, fromHistory, fromOrders);
+  }, [c.visitsCount, h?.appointments, h?.orders]);
+
+  const effectiveLastVisitAt = useMemo(() => {
+    if (c.lastVisitAt) return c.lastVisitAt;
+    const lastCompleted = (h?.appointments ?? []).find((a) => a.status === 'COMPLETED');
+    return lastCompleted?.startAt ?? null;
+  }, [c.lastVisitAt, h?.appointments]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -158,8 +182,13 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <StatCard label="Visitas" value={num(c.visitsCount)} icon={CalendarCheck} />
-        <StatCard label="Total gasto" value={money(c.totalSpent)} icon={TrendingUp} hint={c.visitsCount ? `Ticket médio ${money(Number(c.totalSpent) / c.visitsCount)}` : undefined} />
+        <StatCard label="Visitas" value={num(effectiveVisitsCount)} icon={CalendarCheck} />
+        <StatCard
+          label="Total gasto"
+          value={money(effectiveTotalSpent)}
+          icon={TrendingUp}
+          hint={effectiveVisitsCount ? `Ticket médio ${money(effectiveTotalSpent / effectiveVisitsCount)}` : undefined}
+        />
         <StatCard
           label="Pontos"
           value={num(c.loyaltyPoints)}
@@ -172,7 +201,12 @@ export default function ClientDetailPage() {
             ) : undefined
           }
         />
-        <StatCard label="Última visita" value={c.lastVisitAt ? fmtDate(c.lastVisitAt) : 'Nunca'} hint={c.lastVisitAt ? fmtRelative(c.lastVisitAt) : undefined} icon={Star} />
+        <StatCard
+          label="Última visita"
+          value={effectiveLastVisitAt ? fmtDate(effectiveLastVisitAt) : 'Nunca'}
+          hint={effectiveLastVisitAt ? fmtRelative(effectiveLastVisitAt) : undefined}
+          icon={Star}
+        />
         <StatCard label="Faltas (no-show)" value={num(c.noShowCount)} icon={UserX} className={c.noShowCount > 0 ? 'border-rose-200' : ''} />
       </div>
 

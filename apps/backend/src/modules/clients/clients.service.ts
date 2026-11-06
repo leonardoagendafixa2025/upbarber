@@ -70,6 +70,45 @@ export class ClientsService {
       },
     });
     if (!c) throw new NotFoundException('Cliente não encontrado');
+
+    // Reconcilia métricas se houver agendamentos ou comandas finalizados
+    const [orderAgg, completedAppts, lastCompletedAppt] = await Promise.all([
+      this.prisma.order.aggregate({
+        where: { tenantId, clientId: id, status: 'CLOSED' },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+      this.prisma.appointment.findMany({
+        where: { tenantId, clientId: id, status: 'COMPLETED', orderId: null },
+        select: { totalPrice: true, startAt: true },
+      }),
+      this.prisma.appointment.findFirst({
+        where: { tenantId, clientId: id, status: 'COMPLETED' },
+        orderBy: { startAt: 'desc' },
+        select: { startAt: true },
+      }),
+    ]);
+
+    const apptsSpent = completedAppts.reduce((sum, a) => sum + Number(a.totalPrice || 0), 0);
+    const ordersSpent = Number(orderAgg._sum.total || 0);
+    const totalSpent = ordersSpent + apptsSpent;
+    const visitsCount = (orderAgg._count.id || 0) + completedAppts.length;
+    const lastVisitAt = lastCompletedAppt?.startAt ?? c.lastVisitAt;
+
+    if (totalSpent > Number(c.totalSpent) || visitsCount > c.visitsCount) {
+      await this.prisma.client.update({
+        where: { id: c.id },
+        data: {
+          totalSpent,
+          visitsCount,
+          lastVisitAt,
+        },
+      });
+      c.totalSpent = new Prisma.Decimal(totalSpent);
+      c.visitsCount = visitsCount;
+      c.lastVisitAt = lastVisitAt;
+    }
+
     return c;
   }
 

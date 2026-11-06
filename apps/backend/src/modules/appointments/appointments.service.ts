@@ -300,6 +300,25 @@ export class AppointmentsService {
     }
     const updated = await this.prisma.appointment.update({ where: { id }, data, include: this.include });
 
+    if (next === 'COMPLETED' && a.status !== 'COMPLETED' && a.clientId && !a.orderId) {
+      await this.prisma.client.update({
+        where: { id: a.clientId },
+        data: {
+          visitsCount: { increment: 1 },
+          totalSpent: { increment: Number(a.totalPrice || 0) },
+          lastVisitAt: a.startAt || new Date(),
+        },
+      });
+    } else if (a.status === 'COMPLETED' && next !== 'COMPLETED' && a.clientId && !a.orderId) {
+      await this.prisma.client.update({
+        where: { id: a.clientId },
+        data: {
+          visitsCount: { decrement: 1 },
+          totalSpent: { decrement: Number(a.totalPrice || 0) },
+        },
+      });
+    }
+
     if (next === 'NO_SHOW' && a.clientId) {
       await this.prisma.client.update({ where: { id: a.clientId }, data: { noShowCount: { increment: 1 } } });
     }
