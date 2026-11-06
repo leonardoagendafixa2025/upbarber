@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, Check, CheckCheck, Clock, Lock, Repeat, Zap } from 'lucide-react';
-import { Tooltip } from '@/components/ui';
 import type { AgendaAppointment, AgendaBlock } from '@/lib/api/appointments';
 import { money } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
@@ -67,6 +66,57 @@ interface DragCreateState {
   pointerId: number;
 }
 
+interface MoveCardState {
+  appt: AgendaAppointment;
+  originColKey: string;
+  originDate: string;
+  originProId: string;
+  originStartMin: number;
+  originEndMin: number;
+  durationMin: number;
+  targetColKey: string;
+  targetDate: string;
+  targetProId: string;
+  targetStartMin: number;
+  targetEndMin: number;
+  isValid: boolean;
+  conflictReason: string;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  isDragging: boolean;
+}
+
+interface ResizeCardState {
+  appt: AgendaAppointment;
+  colKey: string;
+  date: string;
+  professionalId: string;
+  startMin: number;
+  currentEndMin: number;
+  durationMin: number;
+  isValid: boolean;
+  conflictReason: string;
+  pointerId: number;
+}
+
+interface KeyboardMoveState {
+  appt: AgendaAppointment;
+  originColKey: string;
+  originDate: string;
+  originProId: string;
+  originStartMin: number;
+  originEndMin: number;
+  durationMin: number;
+  targetColKey: string;
+  targetDate: string;
+  targetProId: string;
+  targetStartMin: number;
+  targetEndMin: number;
+  isValid: boolean;
+  conflictReason: string;
+}
+
 export function TimeGrid({
   columns,
   appointments,
@@ -77,6 +127,8 @@ export function TimeGrid({
   onSlotClick,
   onAppointmentClick,
   onBlockClick,
+  onAppointmentMove,
+  onAppointmentResize,
 }: {
   columns: GridColumn[];
   appointments: AgendaAppointment[];
@@ -87,9 +139,10 @@ export function TimeGrid({
   onSlotClick: (date: string, time: string, professionalId: string, duration?: number) => void;
   onAppointmentClick: (a: AgendaAppointment) => void;
   onBlockClick: (b: AgendaBlock) => void;
+  onAppointmentMove?: (appt: AgendaAppointment, newDate: string, newTime: string, newProId: string) => void;
+  onAppointmentResize?: (appt: AgendaAppointment, newDurationMinutes: number) => void;
 }) {
   const step = Math.max(5, interval || 15);
-  // Altura proporcional por slot para acomodar as 3 linhas de informação com folga
   const rowH = step <= 10 ? 32 : step <= 15 ? 44 : step <= 30 ? 68 : 92;
   const ppm = rowH / step;
   const rows = useMemo(() => {
@@ -156,21 +209,70 @@ export function TimeGrid({
   const intervalEnd = 13 * 60;
   const hasInterval = range.start <= intervalStart && range.end >= intervalEnd;
 
-  // Estado de Arraste (Fase 2)
+  // Estados de Interação (Fases 2 e 3)
   const [drag, setDrag] = useState<DragCreateState | null>(null);
+  const [moving, setMoving] = useState<MoveCardState | null>(null);
+  const [resizing, setResizing] = useState<ResizeCardState | null>(null);
+  const [keyboardState, setKeyboardState] = useState<KeyboardMoveState | null>(null);
+
   const colRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Validador central de conflitos e expediente (usado por Drag, Move, Resize e Teclado)
+  const checkSlotConflict = (
+    targetCol: GridColumn,
+    startMin: number,
+    endMin: number,
+    ignoreApptId?: string,
+  ): { valid: boolean; reason: string } => {
+    if (targetCol.off) {
+      return { valid: false, reason: 'Profissional de folga' };
+    }
+    const isWithinWorking = targetCol.working.some((w) => w.start <= startMin && endMin <= w.end);
+    if (!isWithinWorking) {
+      return { valid: false, reason: 'Fora do horário de expediente' };
+    }
+    if (hasInterval && Math.max(startMin, intervalStart) < Math.min(endMin, intervalEnd)) {
+      return { valid: false, reason: 'Horário de intervalo (12h–13h)' };
+    }
+    const colBlocks = perColumn.get(targetCol.key)?.blocks ?? [];
+    const hitBlock = colBlocks.find((b) => Math.max(startMin, b.start) < Math.min(endMin, b.end));
+    if (hitBlock) {
+      return { valid: false, reason: `Bloqueio: ${hitBlock.b.reason || 'Indisponível'}` };
+    }
+    const colAppts = perColumn.get(targetCol.key)?.appts ?? [];
+    const hitAppt = colAppts.find((a) => {
+      if (a.item.id === ignoreApptId) return false;
+      if (a.item.status === 'CANCELLED' || a.item.status === 'NO_SHOW') return false;
+      return Math.max(startMin, a.start) < Math.min(endMin, a.end);
+    });
+    if (hitAppt) {
+      const hitName = hitAppt.item.client?.name || hitAppt.item.guestName || 'Outro cliente';
+      return { valid: false, reason: `Conflito com ${hitName}` };
+    }
+    return { valid: true, reason: '' };
+  };
+
+  // Helper para identificar coluna sob as coordenadas X da janela
+  const getColUnderPointer = (clientX: number, fallbackCol: GridColumn): GridColumn => {
+    for (const [key, el] of colRefs.current.entries()) {
+      const rect = el.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right) {
+        const found = columns.find((c) => c.key === key);
+        if (found) return found;
+      }
+    }
+    return fallbackCol;
+  };
+
+  // --- 1. CRIAÇÃO POR ARRASTE (FASE 2) ---
   const handlePointerDown = (e: React.PointerEvent, col: GridColumn, m: number) => {
-    if (e.button !== 0) return; // apenas clique primário
-    // Não permite iniciar arraste fora da jornada ou no intervalo
+    if (e.button !== 0) return;
     const isWorkingSlot = !col.off && inWorking(col, m) && !(m >= intervalStart && m < intervalEnd);
     if (!isWorkingSlot) return;
 
-    // Não permite iniciar em cima de um bloqueio existente
     const colBlocks = perColumn.get(col.key)?.blocks ?? [];
     if (colBlocks.some((b) => b.start <= m && m < b.end)) return;
 
-    // Não permite iniciar em cima de um agendamento existente
     const colAppts = perColumn.get(col.key)?.appts ?? [];
     if (colAppts.some((a) => a.start <= m && m < a.end && a.item.status !== 'CANCELLED' && a.item.status !== 'NO_SHOW')) {
       return;
@@ -179,7 +281,7 @@ export function TimeGrid({
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // Ignora erro de captura se não suportado
+      // Ignora erro
     }
 
     setDrag({
@@ -195,83 +297,363 @@ export function TimeGrid({
     });
   };
 
-  const handlePointerMove = (e: React.PointerEvent, col: GridColumn) => {
-    if (!drag || drag.colKey !== col.key) return;
+  // --- 2. MOVER CARD (FASE 3) ---
+  const handleCardPointerDown = (e: React.PointerEvent, a: AgendaAppointment, col: GridColumn, start: number, end: number) => {
+    if (e.button !== 0) return;
+    if (a.status === 'COMPLETED' || a.status === 'CANCELLED') return;
 
-    const colEl = colRefs.current.get(col.key);
-    if (!colEl) return;
-
-    const rect = colEl.getBoundingClientRect();
-    const relY = Math.max(0, Math.min(height, e.clientY - rect.top));
-    const currentM = range.start + relY / ppm;
-    const snappedM = Math.round(currentM / 15) * 15;
-
-    let minM = Math.min(drag.anchorMin, snappedM);
-    let maxM = Math.max(drag.anchorMin, snappedM);
-    if (maxM - minM < 15) {
-      maxM = minM + 15;
+    e.stopPropagation();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignora erro
     }
 
-    let isValid = true;
-    let conflictReason = '';
-
-    // 1. Validação de Intervalo
-    if (maxM > intervalStart && minM < intervalEnd) {
-      isValid = false;
-      conflictReason = 'Horário de intervalo';
-    }
-
-    // 2. Validação de Expediente
-    if (isValid && (!inWorking(col, minM) || !inWorking(col, maxM - 1))) {
-      isValid = false;
-      conflictReason = 'Fora do expediente';
-    }
-
-    // 3. Validação de Conflito com outros agendamentos
-    if (isValid) {
-      const colAppts = perColumn.get(col.key)?.appts ?? [];
-      const hasConflict = colAppts.some(({ item: a, start, end }) => {
-        if (a.status === 'CANCELLED' || a.status === 'NO_SHOW') return false;
-        return start < maxM && end > minM;
-      });
-      if (hasConflict) {
-        isValid = false;
-        conflictReason = 'Conflito de horário';
-      }
-    }
-
-    // 4. Validação com Bloqueios
-    if (isValid) {
-      const colBlocks = perColumn.get(col.key)?.blocks ?? [];
-      const hasBlockConflict = colBlocks.some(({ start, end }) => start < maxM && end > minM);
-      if (hasBlockConflict) {
-        isValid = false;
-        conflictReason = 'Horário bloqueado';
-      }
-    }
-
-    setDrag((prev) => (prev ? { ...prev, minMin: minM, maxMin: maxM, isValid, conflictReason } : null));
+    const duration = Math.max(15, end - start);
+    setMoving({
+      appt: a,
+      originColKey: col.key,
+      originDate: col.date,
+      originProId: col.professionalId,
+      originStartMin: start,
+      originEndMin: end,
+      durationMin: duration,
+      targetColKey: col.key,
+      targetDate: col.date,
+      targetProId: col.professionalId,
+      targetStartMin: start,
+      targetEndMin: end,
+      isValid: true,
+      conflictReason: '',
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      isDragging: false,
+    });
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!drag) return;
+  // --- 3. REDIMENSIONAR CARD PELA BORDA INFERIOR (FASE 3) ---
+  const handleResizePointerDown = (e: React.PointerEvent, a: AgendaAppointment, col: GridColumn, start: number, end: number) => {
+    if (e.button !== 0) return;
+    if (a.status === 'COMPLETED' || a.status === 'CANCELLED') return;
 
+    e.stopPropagation();
     try {
-      e.currentTarget.releasePointerCapture(drag.pointerId);
+      e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // Ignora erro de liberação de captura
+      // Ignora erro
     }
 
-    if (drag.isValid) {
-      const duration = drag.maxMin - drag.minMin;
-      onSlotClick(drag.date, toHHMM(drag.minMin), drag.professionalId, duration);
+    setResizing({
+      appt: a,
+      colKey: col.key,
+      date: col.date,
+      professionalId: col.professionalId,
+      startMin: start,
+      currentEndMin: end,
+      durationMin: end - start,
+      isValid: true,
+      conflictReason: '',
+      pointerId: e.pointerId,
+    });
+  };
+
+  // --- POINTER MOVE CENTRAL ---
+  const handlePointerMove = (e: React.PointerEvent, currentCol: GridColumn) => {
+    // A. Mover card
+    if (moving && moving.pointerId === e.pointerId) {
+      const dist = Math.hypot(e.clientX - moving.startClientX, e.clientY - moving.startClientY);
+      const isDragging = moving.isDragging || dist > 4;
+
+      const targetCol = getColUnderPointer(e.clientX, currentCol);
+      const colEl = colRefs.current.get(targetCol.key);
+      if (!colEl) return;
+
+      const rect = colEl.getBoundingClientRect();
+      const relY = Math.max(0, Math.min(height, e.clientY - rect.top));
+      const currentM = range.start + relY / ppm;
+      const snappedStartM = Math.round(currentM / 15) * 15;
+      const targetEndM = snappedStartM + moving.durationMin;
+
+      const { valid, reason } = checkSlotConflict(targetCol, snappedStartM, targetEndM, moving.appt.id);
+
+      setMoving((prev) =>
+        prev
+          ? {
+              ...prev,
+              isDragging,
+              targetColKey: targetCol.key,
+              targetDate: targetCol.date,
+              targetProId: targetCol.professionalId,
+              targetStartMin: snappedStartM,
+              targetEndMin: targetEndM,
+              isValid: valid,
+              conflictReason: reason,
+            }
+          : null,
+      );
+      return;
     }
 
-    setDrag(null);
+    // B. Redimensionar card
+    if (resizing && resizing.pointerId === e.pointerId) {
+      const colEl = colRefs.current.get(resizing.colKey);
+      if (!colEl) return;
+
+      const rect = colEl.getBoundingClientRect();
+      const relY = Math.max(0, Math.min(height, e.clientY - rect.top));
+      const currentM = range.start + relY / ppm;
+      const snappedEndM = Math.max(resizing.startMin + 15, Math.round(currentM / 15) * 15);
+      const targetCol = columns.find((c) => c.key === resizing.colKey) || currentCol;
+
+      const { valid, reason } = checkSlotConflict(targetCol, resizing.startMin, snappedEndM, resizing.appt.id);
+
+      setResizing((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentEndMin: snappedEndM,
+              durationMin: snappedEndM - resizing.startMin,
+              isValid: valid,
+              conflictReason: reason,
+            }
+          : null,
+      );
+      return;
+    }
+
+    // C. Criação por arraste
+    if (drag && drag.colKey === currentCol.key) {
+      const colEl = colRefs.current.get(currentCol.key);
+      if (!colEl) return;
+
+      const rect = colEl.getBoundingClientRect();
+      const relY = Math.max(0, Math.min(height, e.clientY - rect.top));
+      const currentM = range.start + relY / ppm;
+      const snappedM = Math.round(currentM / 15) * 15;
+
+      let minM = Math.min(drag.anchorMin, snappedM);
+      let maxM = Math.max(drag.anchorMin, snappedM);
+      if (maxM - minM < 15) {
+        minM = drag.anchorMin;
+        maxM = drag.anchorMin + 15;
+      }
+
+      const { valid, reason } = checkSlotConflict(currentCol, minM, maxM);
+
+      setDrag((prev) =>
+        prev
+          ? {
+              ...prev,
+              minMin: minM,
+              maxMin: maxM,
+              isValid: valid,
+              conflictReason: reason,
+            }
+          : null,
+      );
+    }
+  };
+
+  // --- POINTER UP CENTRAL ---
+  const handlePointerUp = (e: React.PointerEvent) => {
+    // Finaliza Mover
+    if (moving && moving.pointerId === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(moving.pointerId);
+      } catch {
+        // Ignora erro
+      }
+
+      if (moving.isDragging) {
+        const moved =
+          moving.targetStartMin !== moving.originStartMin ||
+          moving.targetProId !== moving.originProId ||
+          moving.targetDate !== moving.originDate;
+
+        if (moved && moving.isValid) {
+          onAppointmentMove?.(
+            moving.appt,
+            moving.targetDate,
+            toHHMM(moving.targetStartMin),
+            moving.targetProId,
+          );
+        }
+      } else {
+        // Foi apenas um clique simples: abre o detalhe do agendamento
+        onAppointmentClick(moving.appt);
+      }
+
+      setMoving(null);
+      return;
+    }
+
+    // Finaliza Redimensionar
+    if (resizing && resizing.pointerId === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(resizing.pointerId);
+      } catch {
+        // Ignora erro
+      }
+
+      if (resizing.isValid && resizing.durationMin !== resizing.appt.totalDuration) {
+        onAppointmentResize?.(resizing.appt, resizing.durationMin);
+      }
+      setResizing(null);
+      return;
+    }
+
+    // Finaliza Drag Create
+    if (drag && drag.pointerId === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(drag.pointerId);
+      } catch {
+        // Ignora erro
+      }
+
+      if (drag.isValid) {
+        const duration = drag.maxMin - drag.minMin;
+        onSlotClick(drag.date, toHHMM(drag.minMin), drag.professionalId, duration);
+      }
+
+      setDrag(null);
+    }
+  };
+
+  // --- CONTROLE POR TECLADO (FASE 3) ---
+  const handleCardKeyDown = (e: React.KeyboardEvent, a: AgendaAppointment, col: GridColumn, start: number, end: number) => {
+    if (a.status === 'COMPLETED' || a.status === 'CANCELLED') return;
+
+    // Espaço: pega o card ou solta para confirmar
+    if (e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!keyboardState) {
+        // Inicia modo teclado
+        setKeyboardState({
+          appt: a,
+          originColKey: col.key,
+          originDate: col.date,
+          originProId: col.professionalId,
+          originStartMin: start,
+          originEndMin: end,
+          durationMin: end - start,
+          targetColKey: col.key,
+          targetDate: col.date,
+          targetProId: col.professionalId,
+          targetStartMin: start,
+          targetEndMin: end,
+          isValid: true,
+          conflictReason: '',
+        });
+      } else if (keyboardState.appt.id === a.id) {
+        // Confirma e salva
+        if (keyboardState.isValid) {
+          const moved =
+            keyboardState.targetStartMin !== keyboardState.originStartMin ||
+            keyboardState.targetProId !== keyboardState.originProId ||
+            keyboardState.targetDate !== keyboardState.originDate;
+
+          if (moved) {
+            onAppointmentMove?.(
+              keyboardState.appt,
+              keyboardState.targetDate,
+              toHHMM(keyboardState.targetStartMin),
+              keyboardState.targetProId,
+            );
+          }
+        }
+        setKeyboardState(null);
+      }
+      return;
+    }
+
+    // Se estiver no modo teclado para este card:
+    if (keyboardState && keyboardState.appt.id === a.id) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setKeyboardState(null);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (keyboardState.isValid) {
+          onAppointmentMove?.(
+            keyboardState.appt,
+            keyboardState.targetDate,
+            toHHMM(keyboardState.targetStartMin),
+            keyboardState.targetProId,
+          );
+        }
+        setKeyboardState(null);
+        return;
+      }
+
+      let nextStart = keyboardState.targetStartMin;
+      let nextCol = columns.find((c) => c.key === keyboardState.targetColKey) || col;
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextStart = Math.max(range.start, keyboardState.targetStartMin - 15);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextStart = Math.min(range.end - keyboardState.durationMin, keyboardState.targetStartMin + 15);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const curIdx = columns.findIndex((c) => c.key === keyboardState.targetColKey);
+        if (curIdx > 0) nextCol = columns[curIdx - 1];
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const curIdx = columns.findIndex((c) => c.key === keyboardState.targetColKey);
+        if (curIdx < columns.length - 1) nextCol = columns[curIdx + 1];
+      }
+
+      const nextEnd = nextStart + keyboardState.durationMin;
+      const { valid, reason } = checkSlotConflict(nextCol, nextStart, nextEnd, keyboardState.appt.id);
+
+      setKeyboardState({
+        ...keyboardState,
+        targetColKey: nextCol.key,
+        targetDate: nextCol.date,
+        targetProId: nextCol.professionalId,
+        targetStartMin: nextStart,
+        targetEndMin: nextEnd,
+        isValid: valid,
+        conflictReason: reason,
+      });
+    }
   };
 
   return (
-    <div ref={scrollRef} className="relative max-h-[calc(100vh-13rem)] min-h-[500px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin select-none">
+    <div
+      ref={scrollRef}
+      className="relative max-h-[calc(100vh-13rem)] min-h-[500px] overflow-auto rounded-2xl border border-white/10 bg-[#09090b] shadow-2xl scrollbar-thin select-none"
+    >
+      {/* Barra de Ajuda do Modo Teclado (Fase 3) */}
+      {keyboardState && (
+        <div className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-500/40 bg-[#171108]/95 px-4 py-2 text-xs font-semibold text-amber-200 backdrop-blur-md shadow-xl animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>
+              Movendo por Teclado: <b>{keyboardState.appt.client?.name || keyboardState.appt.guestName}</b> para{' '}
+              <b className="text-white">{toHHMM(keyboardState.targetStartMin)}</b> ({columns.find((c) => c.key === keyboardState.targetColKey)?.date})
+            </span>
+            {!keyboardState.isValid && (
+              <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] text-red-300 border border-red-500/40">
+                ⚠️ {keyboardState.conflictReason}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-zinc-400">
+            <span>[Setas] Mover</span>
+            <span>[Espaço/Enter] Fixar</span>
+            <span>[Esc] Cancelar</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex min-w-fit w-full">
         {/* coluna de horas */}
         <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-white/10 bg-[#0d0d12]/95 backdrop-blur-md">
@@ -324,7 +706,11 @@ export function TimeGrid({
                 }}
                 onPointerMove={(e) => handlePointerMove(e, col)}
                 onPointerUp={handlePointerUp}
-                onPointerCancel={() => setDrag(null)}
+                onPointerCancel={() => {
+                  setDrag(null);
+                  setMoving(null);
+                  setResizing(null);
+                }}
                 className="relative touch-none"
                 style={{ height }}
               >
@@ -396,10 +782,16 @@ export function TimeGrid({
                 {colData?.appts
                   .filter((x) => x.end > range.start && x.start < range.end)
                   .map(({ item: a, start, end, lane, lanes }) => {
-                    const h = clampH(start, end);
+                    const isBeingMoved = moving?.appt.id === a.id && moving.isDragging;
+                    const isKeyboardTarget = keyboardState?.appt.id === a.id;
+
+                    const effectiveStart = resizing?.appt.id === a.id ? resizing.startMin : start;
+                    const effectiveEnd = resizing?.appt.id === a.id ? resizing.currentEndMin : end;
+                    const h = clampH(effectiveStart, effectiveEnd);
+
                     const name = a.client?.name ?? a.guestName ?? 'Sem cliente';
                     const services = a.services.map((s) => s.service.name).join(', ') || 'Atendimento';
-                    const timeRange = `${toHHMM(start)}–${toHHMM(end)}`;
+                    const timeRange = `${toHHMM(effectiveStart)}–${toHHMM(effectiveEnd)}`;
                     const priceFormatted = a.totalPrice ? money(Number(a.totalPrice)) : 'R$ 45';
 
                     const isDelayed = a.status === 'SCHEDULED' && start < now.minutes && !a.checkedInAt;
@@ -438,18 +830,12 @@ export function TimeGrid({
                       StatusIcon = null;
                     }
 
-                    return (
-                      <Tooltip key={a.id} content={`${timeRange} · ${name} · ${services} · ${statusLabelText}`}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAppointmentClick(a);
-                          }}
-                          className={cn(
-                            'group absolute z-[6] overflow-hidden rounded-xl border p-2.5 text-left shadow-lg backdrop-blur-md transition-all hover:z-[9] hover:shadow-2xl hover:brightness-110 flex flex-col justify-between',
-                            cardBg,
-                          )}
+                    // Se estiver sendo movido via mouse, exibe placeholder tracejado no lugar original
+                    if (isBeingMoved) {
+                      return (
+                        <div
+                          key={`placeholder-${a.id}`}
+                          className="absolute z-[3] rounded-xl border-2 border-dashed border-amber-400/40 bg-amber-400/5 transition-all duration-200 flex items-center justify-center pointer-events-none"
                           style={{
                             top: clampTop(start) + 1,
                             height: h - 2,
@@ -457,38 +843,130 @@ export function TimeGrid({
                             width: `calc(${100 / lanes}% - 4px)`,
                           }}
                         >
-                          <div className="w-full">
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="truncate font-bold text-white text-xs tracking-tight">
-                                {name}
-                              </span>
-                              <div className="shrink-0 flex items-center gap-1">
-                                {a.isFitIn && <Zap className="h-3 w-3 text-amber-400" />}
-                                {a.recurrenceId && <Repeat className="h-3 w-3 text-zinc-400" />}
-                                {StatusIcon}
-                              </div>
-                            </div>
+                          <span className="text-[11px] font-bold text-amber-400/50">Origem</span>
+                        </div>
+                      );
+                    }
 
-                            <div className="truncate text-[11px] text-zinc-300 mt-0.5">
-                              {services} <span className="text-zinc-400">· {timeRange}</span>
-                            </div>
-
-                            <div className="truncate text-[11px] mt-0.5">
-                              <span className="font-semibold text-zinc-200">{priceFormatted}</span>
-                              <span className="text-zinc-500"> · </span>
-                              <span className={statusTextColor}>{statusLabelText}</span>
+                    return (
+                      <div
+                        key={a.id}
+                        tabIndex={0}
+                        onKeyDown={(e) => handleCardKeyDown(e, a, col, start, end)}
+                        onPointerDown={(e) => handleCardPointerDown(e, a, col, start, end)}
+                        className={cn(
+                          'group absolute z-[6] overflow-hidden rounded-xl border p-2.5 text-left shadow-lg backdrop-blur-md transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing focus:outline-none',
+                          isKeyboardTarget
+                            ? 'ring-2 ring-amber-400 scale-[1.02] shadow-2xl z-40'
+                            : 'hover:z-[9] hover:shadow-2xl hover:brightness-110 focus:ring-2 focus:ring-amber-400/60',
+                          cardBg,
+                        )}
+                        style={{
+                          top: clampTop(effectiveStart) + 1,
+                          height: h - 2,
+                          left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                          width: `calc(${100 / lanes}% - 4px)`,
+                        }}
+                      >
+                        <div className="w-full">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="truncate font-bold text-white text-xs tracking-tight">
+                              {name}
+                            </span>
+                            <div className="shrink-0 flex items-center gap-1">
+                              {a.isFitIn && <Zap className="h-3 w-3 text-amber-400" />}
+                              {a.recurrenceId && <Repeat className="h-3 w-3 text-zinc-400" />}
+                              {StatusIcon}
                             </div>
                           </div>
 
-                          {effectiveStatus === 'IN_PROGRESS' && (
-                            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
-                              <div className="h-full rounded-full bg-amber-400 animate-pulse" style={{ width: '65%' }} />
-                            </div>
-                          )}
-                        </button>
-                      </Tooltip>
+                          <div className="truncate text-[11px] text-zinc-300 mt-0.5">
+                            {services} <span className="text-zinc-400">· {timeRange}</span>
+                          </div>
+
+                          <div className="truncate text-[11px] mt-0.5">
+                            <span className="font-semibold text-zinc-200">{priceFormatted}</span>
+                            <span className="text-zinc-500"> · </span>
+                            <span className={statusTextColor}>{statusLabelText}</span>
+                          </div>
+                        </div>
+
+                        {effectiveStatus === 'IN_PROGRESS' && (
+                          <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                            <div className="h-full rounded-full bg-amber-400 animate-pulse" style={{ width: '65%' }} />
+                          </div>
+                        )}
+
+                        {/* Alça inferior de redimensionamento (Fase 3) */}
+                        {effectiveStatus !== 'COMPLETED' && effectiveStatus !== 'CANCELLED' && (
+                          <div
+                            onPointerDown={(e) => handleResizePointerDown(e, a, col, start, end)}
+                            className="group/resize absolute inset-x-0 bottom-0 h-3 cursor-ns-resize flex items-center justify-center hover:bg-amber-400/30 rounded-b-xl transition-colors z-20"
+                            title="Arraste para alterar a duração"
+                          >
+                            <div className="h-1 w-6 rounded-full bg-white/30 group-hover/resize:bg-amber-300 transition-colors" />
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
+
+                {/* Ghost Card de Movimento Elevado (Fase 3) */}
+                {moving && moving.isDragging && moving.targetColKey === col.key && (
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute inset-x-1.5 z-40 rounded-xl border-2 p-2.5 shadow-2xl backdrop-blur-md transition-all duration-75 flex flex-col justify-between scale-[1.03]',
+                      moving.isValid
+                        ? 'border-amber-400 bg-[#1f1708]/95 shadow-amber-500/30 ring-2 ring-amber-400/50'
+                        : 'border-red-500 bg-red-950/90 shadow-red-500/30 ring-2 ring-red-500/50',
+                    )}
+                    style={{
+                      top: clampTop(moving.targetStartMin),
+                      height: clampH(moving.targetStartMin, moving.targetEndMin),
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="truncate font-bold text-white text-xs">
+                        {moving.appt.client?.name || moving.appt.guestName}
+                      </span>
+                      <span
+                        className={cn(
+                          'rounded px-2 py-0.5 text-[10px] font-bold shadow-md',
+                          moving.isValid ? 'bg-amber-400 text-black' : 'bg-red-500 text-white',
+                        )}
+                      >
+                        {moving.isValid ? `${toHHMM(moving.targetStartMin)}–${toHHMM(moving.targetEndMin)}` : moving.conflictReason}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-300">
+                      {moving.durationMin} min · {moving.isValid ? 'Solte para mover' : 'Posição inválida'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Badge de Redimensionamento ao Vivo (Fase 3) */}
+                {resizing && resizing.colKey === col.key && (
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute inset-x-1.5 z-40 rounded-xl border-2 border-dashed p-2 shadow-2xl backdrop-blur-md flex items-center justify-between',
+                      resizing.isValid
+                        ? 'border-sky-400 bg-sky-500/20 text-sky-200'
+                        : 'border-red-500 bg-red-500/20 text-red-200',
+                    )}
+                    style={{
+                      top: clampTop(resizing.startMin),
+                      height: clampH(resizing.startMin, resizing.currentEndMin),
+                    }}
+                  >
+                    <span className="text-xs font-bold">
+                      {resizing.durationMin} min (até {toHHMM(resizing.currentEndMin)})
+                    </span>
+                    {!resizing.isValid && (
+                      <span className="text-[10px] font-bold text-red-300">⚠️ {resizing.conflictReason}</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Ghost Card de Criação por Arraste (Fase 2) */}
                 {drag && drag.colKey === col.key && (

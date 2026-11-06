@@ -4,9 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, format, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { CalendarDays, ChevronLeft, ChevronRight, Lock, Plus, RefreshCw } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Loader2, Lock, Plus, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button, ConfirmDialog, Input, PageHeader, Select, Skeleton, Switch, Tabs, TabsList, TabsTrigger } from '@/components/ui';
-import { appointmentsApi, catalogApi, type AgendaAppointment, type AgendaBlock } from '@/lib/api/appointments';
+import { appointmentsApi, catalogApi, type AgendaAppointment, type AgendaBlock, type AgendaData } from '@/lib/api/appointments';
 import { errorMessage } from '@/lib/api/client';
 import { fromISODate, toISODate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth.store';
@@ -18,7 +18,7 @@ import { AgendaList } from '@/components/agenda/AgendaList';
 import { AppointmentFormDialog, type AppointmentFormInitial } from '@/components/agenda/AppointmentFormDialog';
 import { AppointmentDetailDialog } from '@/components/agenda/AppointmentDetailDialog';
 import { BlockDialog } from '@/components/agenda/BlockDialog';
-import { openingRanges, toHHMM, toMin, workingFor, zoned, type Interval } from '@/components/agenda/tz';
+import { openingRanges, toHHMM, toMin, workingFor, zoned, zonedToISO, type Interval } from '@/components/agenda/tz';
 
 type View = 'day' | 'week' | 'list';
 
@@ -257,6 +257,181 @@ export default function AgendaPage() {
   const openNew = (d = date, time?: string, proId?: string, duration?: number) =>
     setForm({ open: true, appointment: null, initial: { date: d, time, professionalId: proId || professionalId || weekPro?.id || undefined, duration } });
 
+  // Status de Salvamento Otimista (Fase 3)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Chip Fixo de Desfazer (Fase 3)
+  const [undoAction, setUndoAction] = useState<{
+    description: string;
+    revert: () => Promise<void>;
+    expiresAt: number;
+  } | null>(null);
+  const [undoSeconds, setUndoSeconds] = useState(5);
+
+  useEffect(() => {
+    if (!undoAction) return;
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((undoAction.expiresAt - Date.now()) / 1000));
+      setUndoSeconds(remaining);
+      if (remaining <= 0) {
+        setUndoAction(null);
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  }, [undoAction]);
+
+  // Handler de Mover Card Otimista
+  const handleAppointmentMove = (
+    appt: AgendaAppointment,
+    newDate: string,
+    newTime: string,
+    newProId: string,
+  ) => {
+    const oldZ = zoned(appt.startAt, tz);
+    const oldDate = oldZ.date;
+    const oldTime = oldZ.time;
+    const oldProId = appt.professionalId;
+    const oldStartAt = appt.startAt;
+    const oldEndAt = appt.endAt;
+
+    const newStartAt = zonedToISO(newDate, newTime, tz);
+    const newEndAt = new Date(new Date(newStartAt).getTime() + (appt.totalDuration || 30) * 60000).toISOString();
+    const targetPro = allPros.find((p) => p.id === newProId) || appt.professional;
+
+    // Atualização Otimista no Cache do React Query
+    qc.setQueriesData<AgendaData>({ queryKey: ['agenda'] }, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        appointments: old.appointments.map((a) =>
+          a.id === appt.id
+            ? {
+                ...a,
+                professionalId: newProId,
+                startAt: newStartAt,
+                endAt: newEndAt,
+                professional: {
+                  id: targetPro.id,
+                  name: targetPro.name,
+                  color: targetPro.color,
+                  avatarUrl: targetPro.avatarUrl,
+                },
+              }
+            : a,
+        ),
+      };
+    });
+
+    setSaveStatus('saving');
+
+    appointmentsApi
+      .update(appt.id, { date: newDate, time: newTime, professionalId: newProId })
+      .then(() => {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+
+        setUndoAction({
+          description: `Agendamento movido para ${newTime}`,
+          expiresAt: Date.now() + 5000,
+          revert: async () => {
+            await appointmentsApi.update(appt.id, {
+              date: oldDate,
+              time: oldTime,
+              professionalId: oldProId,
+            });
+            qc.invalidateQueries({ queryKey: ['agenda'] });
+            toast.success('Movimento desfeito');
+          },
+        });
+        qc.invalidateQueries({ queryKey: ['agenda'] });
+      })
+      .catch((err) => {
+        // Reversão em caso de erro
+        qc.setQueriesData<AgendaData>({ queryKey: ['agenda'] }, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            appointments: old.appointments.map((a) =>
+              a.id === appt.id
+                ? {
+                    ...a,
+                    professionalId: oldProId,
+                    startAt: oldStartAt,
+                    endAt: oldEndAt,
+                    professional: appt.professional,
+                  }
+                : a,
+            ),
+          };
+        });
+        setSaveStatus('idle');
+        toast.error(errorMessage(err, 'Erro ao mover agendamento. Posição revertida.'));
+      });
+  };
+
+  // Handler de Redimensionar Card Otimista
+  const handleAppointmentResize = (appt: AgendaAppointment, newDurationMinutes: number) => {
+    const oldDuration = appt.totalDuration;
+    const oldEndAt = appt.endAt;
+    const newEndAt = new Date(new Date(appt.startAt).getTime() + newDurationMinutes * 60000).toISOString();
+
+    // Atualização Otimista no Cache do React Query
+    qc.setQueriesData<AgendaData>({ queryKey: ['agenda'] }, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        appointments: old.appointments.map((a) =>
+          a.id === appt.id
+            ? {
+                ...a,
+                totalDuration: newDurationMinutes,
+                endAt: newEndAt,
+              }
+            : a,
+        ),
+      };
+    });
+
+    setSaveStatus('saving');
+
+    appointmentsApi
+      .update(appt.id, { durationMinutes: newDurationMinutes })
+      .then(() => {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+
+        setUndoAction({
+          description: `Duração alterada para ${newDurationMinutes} min`,
+          expiresAt: Date.now() + 5000,
+          revert: async () => {
+            await appointmentsApi.update(appt.id, { durationMinutes: oldDuration });
+            qc.invalidateQueries({ queryKey: ['agenda'] });
+            toast.success('Redimensionamento desfeito');
+          },
+        });
+        qc.invalidateQueries({ queryKey: ['agenda'] });
+      })
+      .catch((err) => {
+        qc.setQueriesData<AgendaData>({ queryKey: ['agenda'] }, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            appointments: old.appointments.map((a) =>
+              a.id === appt.id
+                ? {
+                    ...a,
+                    totalDuration: oldDuration,
+                    endAt: oldEndAt,
+                  }
+                : a,
+            ),
+          };
+        });
+        setSaveStatus('idle');
+        toast.error(errorMessage(err, 'Erro ao redimensionar agendamento. Duração revertida.'));
+      });
+  };
+
   const dateFormattedTitle = useMemo(() => {
     if (view === 'day') {
       const formatted = format(fromISODate(date), "EEEE, d 'de' MMMM", { locale: ptBR });
@@ -273,6 +448,28 @@ export default function AgendaPage() {
         description={<span className="text-zinc-400 font-medium">{dateFormattedTitle}</span>}
         actions={
           <div className="flex items-center gap-2.5">
+            {saveStatus !== 'idle' && (
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md transition-all duration-200',
+                  saveStatus === 'saving'
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+                )}
+              >
+                {saveStatus === 'saving' ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                    <span>Salvando…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Salvo</span>
+                  </>
+                )}
+              </div>
+            )}
             <Button
               variant="outline"
               className="border-white/10 bg-[#0d0d12]/90 text-zinc-200 hover:bg-white/10 hover:text-white font-medium"
@@ -418,6 +615,8 @@ export default function AgendaPage() {
               onSlotClick={(d, time, proId, duration) => openNew(d, time, proId, duration)}
               onAppointmentClick={setDetail}
               onBlockClick={setBlockToRemove}
+              onAppointmentMove={handleAppointmentMove}
+              onAppointmentResize={handleAppointmentResize}
             />
           </div>
 
@@ -479,6 +678,28 @@ export default function AgendaPage() {
         loading={removeBlock.isPending}
         onConfirm={() => { if (blockToRemove) removeBlock.mutate(blockToRemove.id); }}
       />
+
+      {/* CHIP FIXO DE DESFAZER (Fase 3) */}
+      {undoAction && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full border border-amber-500/50 bg-[#14120e]/95 px-5 py-2.5 shadow-2xl shadow-black/90 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <RotateCcw className="h-4 w-4 text-amber-400 shrink-0" />
+          <span className="text-xs font-semibold text-zinc-200">{undoAction.description}</span>
+          <button
+            onClick={async () => {
+              const action = undoAction;
+              setUndoAction(null);
+              try {
+                await action.revert();
+              } catch (e) {
+                toast.error(errorMessage(e, 'Erro ao desfazer ação'));
+              }
+            }}
+            className="ml-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-3 py-1 text-xs font-extrabold text-black hover:brightness-110 shadow-md shadow-amber-500/30 transition-all active:scale-95"
+          >
+            Desfazer ({undoSeconds}s)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
