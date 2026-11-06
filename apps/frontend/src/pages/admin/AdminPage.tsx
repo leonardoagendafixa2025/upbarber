@@ -1050,17 +1050,17 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-30 bg-gray-950 text-white shadow-xl border-b border-[#b8942a]/30">
-        <div className="mx-auto flex min-h-[6.5rem] max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
-          <Link to="/admin" className="flex items-center gap-3 font-bold">
-            <img src="/logo.png?v=3" alt="UP BARBER" className="h-24 sm:h-28 w-auto object-contain drop-shadow-md" />
-            <span className="rounded bg-[#c9a227]/20 border border-[#c9a227]/40 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-[#f0cc66]">
+    <div className="min-h-screen bg-[#09090b]">
+      <header className="sticky top-0 z-30 bg-[#0d0d12] text-white shadow-xl border-b border-[#c9a227]/25">
+        <div className="mx-auto flex min-h-[5.5rem] max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
+          <Link to="/admin" className="flex items-center gap-3 font-bold shrink-0">
+            <img src="/logo.png?v=4" alt="UP BARBER" className="h-20 sm:h-24 w-auto object-contain drop-shadow-lg" />
+            <span className="rounded-md bg-[#c9a227]/15 border border-[#c9a227]/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#f0cc66]">
               SUPERADMIN
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 overflow-x-auto">
             {nav.map((n) => (
               <NavLink
                 key={n.to}
@@ -1068,20 +1068,22 @@ export default function AdminPage() {
                 end={n.end}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold transition-all',
-                    isActive ? 'bg-[#c9a227] text-black shadow-md' : 'text-gray-300 hover:bg-white/10 hover:text-white',
+                    'flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-all whitespace-nowrap',
+                    isActive
+                      ? 'bg-gradient-to-r from-[#c9a227] to-[#f0cc66] text-black shadow-lg shadow-amber-500/20'
+                      : 'text-gray-400 hover:bg-white/8 hover:text-white',
                   )
                 }
               >
-                <n.icon className="h-4 w-4" />
+                <n.icon className="h-4 w-4 shrink-0" />
                 <span className="hidden md:inline">{n.label}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-sm font-medium text-gray-300 lg:inline">Olá, {user?.name?.split(' ')[0]}</span>
-            <Button size="sm" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/15" asChild>
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+            <span className="hidden text-sm font-medium text-gray-400 lg:inline">Olá, <span className="text-[#f0cc66]">{user?.name?.split(' ')[0]}</span></span>
+            <Button size="sm" variant="outline" className="border-[#c9a227]/30 bg-[#c9a227]/8 text-[#c9a227] hover:bg-[#c9a227]/15 hover:text-[#f0cc66]" asChild>
               <Link to={current ? '/app' : '/admin/barbearias'}>
                 {current ? (
                   <>
