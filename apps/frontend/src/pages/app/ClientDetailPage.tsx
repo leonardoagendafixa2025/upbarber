@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CalendarCheck, CalendarPlus, Coins, MessageCircle, Package, Pencil, Receipt, Star, Trash2, TrendingUp, UserX } from 'lucide-react';
@@ -99,31 +99,24 @@ export default function ClientDetailPage() {
       />
     );
 
-  const firstName = c.name.split(' ')[0];
+  const firstName = (c.name || '').split(' ')[0];
 
-  const effectiveTotalSpent = useMemo(() => {
-    const raw = Number(c.totalSpent || 0);
-    const fromHistory = (h?.appointments ?? [])
-      .filter((a) => a.status === 'COMPLETED')
-      .reduce((sum, a) => sum + Number(a.totalPrice || 0), 0);
-    const fromOrders = (h?.orders ?? [])
-      .filter((o) => o.status === 'CLOSED')
-      .reduce((sum, o) => sum + Number(o.total || 0), 0);
-    return Math.max(raw, fromHistory + fromOrders, fromHistory);
-  }, [c.totalSpent, h?.appointments, h?.orders]);
+  const rawTotalSpent = Number(c.totalSpent || 0);
+  const fromHistorySpent = (h?.appointments ?? [])
+    .filter((a) => a.status === 'COMPLETED')
+    .reduce((sum, a) => sum + Number(a.totalPrice || 0), 0);
+  const fromOrdersSpent = (h?.orders ?? [])
+    .filter((o) => o.status === 'CLOSED')
+    .reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const effectiveTotalSpent = Math.max(rawTotalSpent, fromHistorySpent + fromOrdersSpent, fromHistorySpent);
 
-  const effectiveVisitsCount = useMemo(() => {
-    const raw = Number(c.visitsCount || 0);
-    const fromHistory = (h?.appointments ?? []).filter((a) => a.status === 'COMPLETED').length;
-    const fromOrders = (h?.orders ?? []).filter((o) => o.status === 'CLOSED').length;
-    return Math.max(raw, fromHistory, fromOrders);
-  }, [c.visitsCount, h?.appointments, h?.orders]);
+  const rawVisits = Number(c.visitsCount || 0);
+  const fromHistoryVisits = (h?.appointments ?? []).filter((a) => a.status === 'COMPLETED').length;
+  const fromOrdersVisits = (h?.orders ?? []).filter((o) => o.status === 'CLOSED').length;
+  const effectiveVisitsCount = Math.max(rawVisits, fromHistoryVisits, fromOrdersVisits);
 
-  const effectiveLastVisitAt = useMemo(() => {
-    if (c.lastVisitAt) return c.lastVisitAt;
-    const lastCompleted = (h?.appointments ?? []).find((a) => a.status === 'COMPLETED');
-    return lastCompleted?.startAt ?? null;
-  }, [c.lastVisitAt, h?.appointments]);
+  const lastCompletedAppt = (h?.appointments ?? []).find((a) => a.status === 'COMPLETED');
+  const effectiveLastVisitAt = c.lastVisitAt || lastCompletedAppt?.startAt || null;
 
   return (
     <div className="space-y-6">
