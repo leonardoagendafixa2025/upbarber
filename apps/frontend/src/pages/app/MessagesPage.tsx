@@ -19,15 +19,26 @@ const STATUS_VARIANT: Record<MessageStatus, 'secondary' | 'warning' | 'success' 
 
 function ProviderCard({ label, icon: Icon, enabled }: { label: string; icon: React.ComponentType<{ className?: string }>; enabled: boolean }) {
   return (
-    <Card className={cn('flex items-center gap-3 p-4', enabled ? '' : 'border-amber-200 bg-amber-50/60')}>
-      <div className={cn('flex h-10 w-10 items-center justify-center rounded-full', enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+    <Card className={cn(
+      'flex items-center gap-3 p-4 transition-all',
+      enabled
+        ? 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/30'
+        : 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500/30'
+    )}>
+      <div className={cn(
+        'flex h-10 w-10 items-center justify-center rounded-full shrink-0',
+        enabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
+      )}>
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">{enabled ? 'Provedor configurado e enviando' : 'Provedor não configurado: mensagens ficam apenas registradas'}</div>
+        <div className="font-semibold text-white">{label}</div>
+        <div className="text-xs text-zinc-400">{enabled ? 'Provedor configurado e enviando' : 'Provedor não configurado: mensagens ficam apenas registradas'}</div>
       </div>
-      {enabled ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <XCircle className="h-5 w-5 text-amber-600" />}
+      {enabled
+        ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+        : <XCircle className="h-5 w-5 shrink-0 text-amber-400" />
+      }
     </Card>
   );
 }
