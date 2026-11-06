@@ -18,56 +18,68 @@ export default function SiteLayout() {
   const current = useAuthStore((s) => s.current);
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-[#b8942a]/30 bg-gray-950 shadow-lg shadow-black/50">
         <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6">
           <Link to="/" className="flex items-center">
             <img src="/logo.png?v=3" alt="UP BARBER" className="h-16 w-auto object-contain drop-shadow" />
           </Link>
           <nav className="ml-4 hidden items-center gap-1 md:flex">
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => cn('rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground', isActive && 'text-foreground')}>
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-md px-3 py-2 text-sm font-semibold tracking-wide transition-colors',
+                    isActive
+                      ? 'text-[#d4a93c] underline underline-offset-4'
+                      : 'text-[#c9a227] hover:text-[#f0cc66]',
+                  )
+                }
+              >
                 {l.label}
               </NavLink>
             ))}
           </nav>
           <div className="ml-auto hidden items-center gap-2 md:flex">
             {token ? (
-              <Button asChild>
+              <Button asChild className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66]">
                 <Link to={current ? '/app' : '/cliente'}>Acessar painel</Link>
               </Button>
             ) : (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" asChild className="text-[#c9a227] hover:bg-white/10 hover:text-[#f0cc66]">
                   <Link to="/cliente/login">Sou cliente</Link>
                 </Button>
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227]/10 hover:text-[#f0cc66]">
                   <Link to="/login">Acessar</Link>
                 </Button>
-                <Button asChild>
+                <Button asChild className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66]">
                   <Link to="/cadastro">Teste grátis 30 dias</Link>
                 </Button>
               </>
             )}
           </div>
-          <button className="ml-auto md:hidden" onClick={() => setOpen(!open)}>
+          <button className="ml-auto text-[#c9a227] hover:text-[#f0cc66] md:hidden" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
         {open && (
-          <div className="border-t px-4 py-3 md:hidden">
+          <div className="border-t border-[#b8942a]/30 bg-gray-950 px-4 py-3 md:hidden">
             {links.map((l) => (
-              <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm font-medium">
+              <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm font-semibold text-[#c9a227] hover:text-[#f0cc66]">
                 {l.label}
               </Link>
             ))}
             <div className="mt-2 flex flex-col gap-2">
-              <Button variant="outline" asChild>
+              <Button variant="ghost" asChild className="text-[#c9a227] hover:bg-white/10">
                 <Link to="/cliente/login">Sou cliente</Link>
               </Button>
-              <Button variant="outline" asChild>
+              <Button variant="outline" asChild className="border-[#c9a227] text-[#c9a227]">
                 <Link to="/login">Acessar</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="bg-[#c9a227] text-black hover:bg-[#f0cc66]">
                 <Link to="/cadastro">Teste grátis 30 dias</Link>
               </Button>
             </div>
