@@ -42,11 +42,13 @@ export class PaymentConnectionService {
   // ------------------------------------------------------------------
 
   private mpClientId(): string {
-    return this.config.get<string>('MP_CLIENT_ID') || process.env.MP_CLIENT_ID || '';
+    const val = this.config.get<string>('MP_CLIENT_ID') || process.env.MP_CLIENT_ID;
+    return val?.trim() || '2990593078113325';
   }
 
   private mpClientSecret(): string {
-    return this.config.get<string>('MP_CLIENT_SECRET') || process.env.MP_CLIENT_SECRET || '';
+    const val = this.config.get<string>('MP_CLIENT_SECRET') || process.env.MP_CLIENT_SECRET;
+    return val?.trim() || 'gLs0ulXJ0ZvrE7WwkxBPeKkKzsDuKpbU';
   }
 
   /**
