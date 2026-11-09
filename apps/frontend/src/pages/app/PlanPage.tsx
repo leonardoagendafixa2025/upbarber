@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarClock, Check, CheckCircle2, CreditCard, ExternalLink, FlaskConical, Info, Lightbulb, RefreshCw, Users, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Check, CheckCircle2, Copy, CreditCard, ExternalLink, FlaskConical, Info, Lightbulb, RefreshCw, Users, X } from 'lucide-react';
 import { Badge, Button, Card, ConfirmDialog, EmptyState, PageHeader, PageLoader, Section, StatCard, Table, TBody, TD, TH, THead, TR } from '@/components/ui';
 import { billingApi, PlanDef } from '@/lib/api/billing';
 import { errorMessage } from '@/lib/api/client';
@@ -191,18 +191,33 @@ export default function PlanPage() {
                 <CreditCard className="h-4 w-4 mr-2" /> Pagar com Mercado Pago <ExternalLink className="h-4 w-4 ml-1.5" />
               </Button>
               {openInvoice.sandboxCheckoutUrl && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-amber-400/40 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 text-xs font-semibold"
-                  onClick={() => {
-                    window.open(openInvoice.sandboxCheckoutUrl!, '_blank', 'noopener');
-                    toast.info('Abrindo Sandbox do Mercado Pago. Dica: abra em aba anônima se você for o dono das credenciais.');
-                  }}
-                >
-                  <FlaskConical className="h-3.5 w-3.5 mr-1.5" /> Testar no Sandbox
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-400/40 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 text-xs font-semibold"
+                    onClick={() => {
+                      navigator.clipboard.writeText(openInvoice.sandboxCheckoutUrl!);
+                      toast.success('Link do Sandbox copiado! Abra uma JANELA ANÔNIMA (Ctrl+Shift+N) e cole o link para testar sem conflito de vendedor.');
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar Link Sandbox (Janela Anônima)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    title="Abrir diretamente no navegador"
+                    className="text-zinc-400 hover:text-white text-xs px-2"
+                    onClick={() => {
+                      window.open(openInvoice.sandboxCheckoutUrl!, '_blank', 'noopener');
+                      toast.info('Abrindo Sandbox. Se der "Ops, ocorreu um erro", use o botão de copiar e abra em Janela Anônima.');
+                    }}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               )}
             </div>
           )}
