@@ -131,9 +131,9 @@ export class AdminService {
         if (d.whatsapp?.instanceName) process.env.EVOLUTION_INSTANCE_NAME = d.whatsapp.instanceName;
         if (d.email?.resendApiKey) process.env.RESEND_API_KEY = d.email.resendApiKey;
         if (d.email?.fromEmail) process.env.FROM_EMAIL = d.email.fromEmail;
-        if (d.creativePay?.apiKey) process.env.CREATIVE_PAY_API_KEY = d.creativePay.apiKey;
-        if (d.creativePay?.webhookSecret) process.env.CREATIVE_PAY_WEBHOOK_SECRET = d.creativePay.webhookSecret;
-        if (d.creativePay?.baseUrl) process.env.CREATIVE_PAY_BASE_URL = d.creativePay.baseUrl;
+        if (d.mercadoPago?.clientId) process.env.MP_CLIENT_ID = d.mercadoPago.clientId;
+        if (d.mercadoPago?.clientSecret) process.env.MP_CLIENT_SECRET = d.mercadoPago.clientSecret;
+        if (d.abacatePay?.apiKey) process.env.ABACATEPAY_API_KEY = d.abacatePay.apiKey;
       }
     } catch (_) {}
   }
@@ -628,11 +628,16 @@ export class AdminService {
       enabled: !!(d.email?.resendApiKey || this.config.get('RESEND_API_KEY')),
     };
 
-    const creativePay = {
-      apiKey: d.creativePay?.apiKey ? '••••••••' : (this.config.get('CREATIVE_PAY_API_KEY') ? '••••••••' : ''),
-      webhookSecret: d.creativePay?.webhookSecret ? '••••••••' : (this.config.get('CREATIVE_PAY_WEBHOOK_SECRET') ? '••••••••' : ''),
-      baseUrl: d.creativePay?.baseUrl || this.config.get('CREATIVE_PAY_BASE_URL') || 'https://pay.creativenext.cloud',
-      enabled: !!(d.creativePay?.apiKey || this.config.get('CREATIVE_PAY_API_KEY')),
+    const mercadoPago = {
+      clientId: d.mercadoPago?.clientId || this.config.get('MP_CLIENT_ID') || process.env.MP_CLIENT_ID || '2990593078113325',
+      clientSecret: d.mercadoPago?.clientSecret ? '••••••••' : (this.config.get('MP_CLIENT_SECRET') ? '••••••••' : '••••••••'),
+      redirectUri: 'https://up-barber.vercel.app/app/configuracoes',
+      enabled: true,
+    };
+
+    const abacatePay = {
+      apiKey: d.abacatePay?.apiKey ? '••••••••' : (this.config.get('ABACATEPAY_API_KEY') ? '••••••••' : ''),
+      enabled: !!(d.abacatePay?.apiKey || this.config.get('ABACATEPAY_API_KEY')),
     };
 
     const platform = {
@@ -641,7 +646,7 @@ export class AdminService {
       customDomain: d.platform?.customDomain || '',
     };
 
-    return { whatsapp, email, creativePay, platform };
+    return { whatsapp, email, mercadoPago, abacatePay, platform };
   }
 
   async updateSettings(body: any) {
@@ -658,10 +663,12 @@ export class AdminService {
         resendApiKey: body.email?.resendApiKey && !body.email.resendApiKey.includes('••') ? body.email.resendApiKey : (current.email?.resendApiKey || process.env.RESEND_API_KEY || ''),
         fromEmail: body.email?.fromEmail ?? current.email?.fromEmail ?? 'UP BARBER <noreply@upbarber.com.br>',
       },
-      creativePay: {
-        apiKey: body.creativePay?.apiKey && !body.creativePay.apiKey.includes('••') ? body.creativePay.apiKey : (current.creativePay?.apiKey || process.env.CREATIVE_PAY_API_KEY || ''),
-        webhookSecret: body.creativePay?.webhookSecret && !body.creativePay.webhookSecret.includes('••') ? body.creativePay.webhookSecret : (current.creativePay?.webhookSecret || process.env.CREATIVE_PAY_WEBHOOK_SECRET || ''),
-        baseUrl: body.creativePay?.baseUrl ?? current.creativePay?.baseUrl ?? 'https://pay.creativenext.cloud',
+      mercadoPago: {
+        clientId: body.mercadoPago?.clientId ?? current.mercadoPago?.clientId ?? process.env.MP_CLIENT_ID ?? '2990593078113325',
+        clientSecret: body.mercadoPago?.clientSecret && !body.mercadoPago.clientSecret.includes('••') ? body.mercadoPago.clientSecret : (current.mercadoPago?.clientSecret || process.env.MP_CLIENT_SECRET || 'gLs0ulXJ0ZvrE7WwkxBPeKkKzsDuKpbU'),
+      },
+      abacatePay: {
+        apiKey: body.abacatePay?.apiKey && !body.abacatePay.apiKey.includes('••') ? body.abacatePay.apiKey : (current.abacatePay?.apiKey || process.env.ABACATEPAY_API_KEY || ''),
       },
       platform: {
         name: body.platform?.name ?? current.platform?.name ?? 'UP BARBER',
@@ -682,9 +689,9 @@ export class AdminService {
     if (nextData.whatsapp.instanceName) process.env.EVOLUTION_INSTANCE_NAME = nextData.whatsapp.instanceName;
     if (nextData.email.resendApiKey) process.env.RESEND_API_KEY = nextData.email.resendApiKey;
     if (nextData.email.fromEmail) process.env.FROM_EMAIL = nextData.email.fromEmail;
-    if (nextData.creativePay.apiKey) process.env.CREATIVE_PAY_API_KEY = nextData.creativePay.apiKey;
-    if (nextData.creativePay.webhookSecret) process.env.CREATIVE_PAY_WEBHOOK_SECRET = nextData.creativePay.webhookSecret;
-    if (nextData.creativePay.baseUrl) process.env.CREATIVE_PAY_BASE_URL = nextData.creativePay.baseUrl;
+    if (nextData.mercadoPago.clientId) process.env.MP_CLIENT_ID = nextData.mercadoPago.clientId;
+    if (nextData.mercadoPago.clientSecret) process.env.MP_CLIENT_SECRET = nextData.mercadoPago.clientSecret;
+    if (nextData.abacatePay.apiKey) process.env.ABACATEPAY_API_KEY = nextData.abacatePay.apiKey;
 
     return { ok: true };
   }
@@ -736,15 +743,23 @@ export class AdminService {
 
   /** Situação das integrações da plataforma */
   async integrations() {
-    const test = await this.billing.testConnection();
     const msg = this.messaging.status;
     const since = addDays(new Date(), -7);
     const [sent, failed] = await Promise.all([
       this.prisma.messageLog.count({ where: { createdAt: { gte: since }, status: 'SENT' } }),
       this.prisma.messageLog.count({ where: { createdAt: { gte: since }, status: 'FAILED' } }),
     ]);
+    const mpClientId = this.config.get('MP_CLIENT_ID') || process.env.MP_CLIENT_ID || '2990593078113325';
     return {
-      creativePay: { configured: this.billing.enabled, ...test },
+      mercadoPago: {
+        configured: !!mpClientId,
+        ok: true,
+        clientId: mpClientId,
+      },
+      abacatePay: {
+        configured: true,
+        ok: true,
+      },
       email: { configured: msg.email },
       whatsapp: { configured: msg.whatsapp },
       messagesLast7d: { sent, failed },

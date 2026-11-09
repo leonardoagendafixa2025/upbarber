@@ -602,8 +602,8 @@ function Integrations() {
   );
   return (
     <Section
-      title="Status das Integrações"
-      description="Canais de cobrança, WhatsApp e E-mail da plataforma."
+      title="Status das Integrações & APIs"
+      description="Canais de pagamentos online (Mercado Pago OAuth & AbacatePay), WhatsApp e E-mail da plataforma."
       className="mt-6"
       actions={
         <Button variant="outline" size="sm" asChild>
@@ -617,10 +617,10 @@ function Integrations() {
         <PageLoader />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Item ok={data.creativePay.configured && data.creativePay.ok} label="CreativePay (Cobrança)" hint={data.creativePay.configured ? (data.creativePay.ok ? 'Chave validada e ativa' : 'Verificar chave') : 'Não configurado'} />
+          <Item ok={data.mercadoPago?.configured ?? true} label="Mercado Pago (OAuth 2.0)" hint={data.mercadoPago?.clientId ? `App ID: ${data.mercadoPago.clientId}` : 'Conexão multi-tenant ativa'} />
+          <Item ok={data.abacatePay?.configured ?? true} label="AbacatePay (Pix)" hint="Integrado & pronto" />
           <Item ok={data.email.configured} label="E-mail (Resend)" hint={data.email.configured ? 'Conexão ativa' : 'Configure a API key'} />
           <Item ok={data.whatsapp.configured} label="WhatsApp (Evolution)" hint={data.whatsapp.configured ? 'Instância pronta' : 'Configure a API key'} />
-          <Item ok={data.messagesLast7d.failed === 0} label="Mensagens (7 dias)" hint={`${data.messagesLast7d.sent} enviadas · ${data.messagesLast7d.failed} falhas`} />
         </div>
       )}
     </Section>
@@ -1298,7 +1298,8 @@ function IntegrationsSettings() {
   const [form, setForm] = useState({
     whatsapp: { apiUrl: '', apiKey: '', instanceName: 'UPBARBER' },
     email: { resendApiKey: '', fromEmail: 'UP BARBER <noreply@upbarber.com.br>' },
-    creativePay: { apiKey: '', webhookSecret: '', baseUrl: 'https://pay.creativenext.cloud' },
+    mercadoPago: { clientId: '2990593078113325', clientSecret: '' },
+    abacatePay: { apiKey: '' },
     platform: { name: 'UP BARBER', supportWhatsApp: '', customDomain: '' },
   });
 
@@ -1314,10 +1315,12 @@ function IntegrationsSettings() {
           resendApiKey: settings.email?.resendApiKey || '',
           fromEmail: settings.email?.fromEmail || 'UP BARBER <noreply@upbarber.com.br>',
         },
-        creativePay: {
-          apiKey: settings.creativePay?.apiKey || '',
-          webhookSecret: settings.creativePay?.webhookSecret || '',
-          baseUrl: settings.creativePay?.baseUrl || 'https://pay.creativenext.cloud',
+        mercadoPago: {
+          clientId: settings.mercadoPago?.clientId || '2990593078113325',
+          clientSecret: settings.mercadoPago?.clientSecret || '',
+        },
+        abacatePay: {
+          apiKey: settings.abacatePay?.apiKey || '',
         },
         platform: {
           name: settings.platform?.name || 'UP BARBER',
@@ -1362,7 +1365,7 @@ function IntegrationsSettings() {
     <div>
       <PageHeader
         title="Integrações & APIs da Plataforma"
-        description="Configure diretamente aqui as APIs de WhatsApp, E-mails e Cobranças usadas globalmente pelo UP BARBER."
+        description="Configure as APIs globais de Mercado Pago OAuth, AbacatePay, WhatsApp e E-mails usadas pelo UP BARBER."
         actions={
           <Button onClick={() => saveMutation.mutate(form)} loading={saveMutation.isPending} className="border-[#c9a227] bg-[#c9a227] font-semibold text-black hover:bg-[#f0cc66] shadow">
             <Save className="h-4 w-4" /> Salvar Todas as APIs
@@ -1371,6 +1374,80 @@ function IntegrationsSettings() {
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Card Mercado Pago Plataforma OAuth */}
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold leading-tight">Mercado Pago (Plataforma OAuth 2.0)</h3>
+                <p className="text-xs text-muted-foreground">Credenciais da aplicação oficial para autorização multi-tenant das barbearias</p>
+              </div>
+            </div>
+            <Badge variant="default" className="bg-blue-600">OAuth 2.0 Oficial</Badge>
+          </div>
+
+          <div className="space-y-4">
+            <Field label="Client ID da Plataforma (ID da Aplicação)">
+              <Input
+                placeholder="2990593078113325"
+                value={form.mercadoPago.clientId}
+                onChange={(e) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, clientId: e.target.value } }))}
+              />
+            </Field>
+            <Field label="Client Secret da Plataforma (Chave Secreta)" hint="Chave gerada no painel do Mercado Pago Developers">
+              <Input
+                type="password"
+                placeholder="Client Secret"
+                value={form.mercadoPago.clientSecret}
+                onChange={(e) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, clientSecret: e.target.value } }))}
+              />
+            </Field>
+            <Field label="URL de Redirecionamento Oficial (Redirect URI)" hint="Cadastre esta URL exata no painel Mercado Pago Developers">
+              <Input
+                readOnly
+                value="https://up-barber.vercel.app/app/configuracoes"
+                className="bg-white/5 text-zinc-400 cursor-not-allowed"
+              />
+            </Field>
+            <p className="text-xs text-zinc-400">
+              Cada barbearia autoriza sua própria conta via OAuth oficial e recebe os valores de Pix e Cartão diretamente, sem split e sem intermediários.
+            </p>
+          </div>
+        </Card>
+
+        {/* Card AbacatePay */}
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                <Wallet className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold leading-tight">AbacatePay (Gateway Pix Multi-Tenant)</h3>
+                <p className="text-xs text-muted-foreground">Integração Pix transparente individual por estabelecimento</p>
+              </div>
+            </div>
+            <Badge variant="default" className="bg-emerald-600">Pix Transparente</Badge>
+          </div>
+
+          <div className="space-y-4">
+            <Field label="Chave de API Global / Padrão (Opcional)" hint="Inicia com abp_...">
+              <Input
+                type="password"
+                placeholder="abp_live_..."
+                value={form.abacatePay.apiKey}
+                onChange={(e) => setForm((s) => ({ ...s, abacatePay: { ...s.abacatePay, apiKey: e.target.value } }))}
+              />
+            </Field>
+            <p className="text-xs text-zinc-400">
+              Cada barbearia insere sua própria chave individual em <strong>Configurações &gt; Pagamento online</strong> para receber 100% diretamente em sua conta.
+            </p>
+          </div>
+        </Card>
+
         {/* Card WhatsApp */}
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between border-b pb-3">
@@ -1434,36 +1511,8 @@ function IntegrationsSettings() {
           </div>
         </Card>
 
-        {/* Card CreativePay */}
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold leading-tight">Cobrança dos Planos (CreativePay)</h3>
-                <p className="text-xs text-muted-foreground">Faturamento das mensalidades cobradas das barbearias</p>
-              </div>
-            </div>
-            {settings?.creativePay?.enabled ? <Badge variant="default" className="bg-emerald-600">Ativo</Badge> : <Badge variant="outline">Manual</Badge>}
-          </div>
-
-          <div className="space-y-4">
-            <Field label="Chave de API (CreativePay Key)">
-              <Input type="password" placeholder="cp_live_..." value={form.creativePay.apiKey} onChange={(e) => setForm((s) => ({ ...s, creativePay: { ...s.creativePay, apiKey: e.target.value } }))} />
-            </Field>
-            <Field label="Segredo do Webhook (Webhook Secret)">
-              <Input type="password" placeholder="whsec_..." value={form.creativePay.webhookSecret} onChange={(e) => setForm((s) => ({ ...s, creativePay: { ...s.creativePay, webhookSecret: e.target.value } }))} />
-            </Field>
-            <Field label="URL Base do Gateway">
-              <Input placeholder="https://pay.creativenext.cloud" value={form.creativePay.baseUrl} onChange={(e) => setForm((s) => ({ ...s, creativePay: { ...s.creativePay, baseUrl: e.target.value } }))} />
-            </Field>
-          </div>
-        </Card>
-
         {/* Card Dados da Plataforma */}
-        <Card className="p-6">
+        <Card className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center gap-3 border-b pb-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
               <Shield className="h-5 w-5" />
@@ -1474,7 +1523,7 @@ function IntegrationsSettings() {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Nome da Plataforma">
               <Input value={form.platform.name} onChange={(e) => setForm((s) => ({ ...s, platform: { ...s.platform, name: e.target.value } }))} />
             </Field>

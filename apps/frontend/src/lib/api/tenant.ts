@@ -16,9 +16,6 @@ export interface Tenant {
     mercadoPagoAccount?: string | null;
     abacatePay?: boolean;
     abacatePayAccount?: string | null;
-    creativePay?: boolean;
-    creativePayLast4?: string | null;
-    creativePayWebhookSecret?: boolean;
     pos: boolean;
     posDeviceId: string | null;
     kioskToken: string | null;

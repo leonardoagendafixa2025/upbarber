@@ -23,7 +23,7 @@ const qrSrc = (qr: string | null) => (!qr ? null : qr.startsWith('data:') || qr.
 export function OnlineChargeButtons({ order, onDone, remaining }: { order: { id: string }; onDone: (o: any) => void; remaining: number }) {
   const tenantQ = useQuery({ queryKey: ['tenant'], queryFn: () => api.get('/tenant').then((r) => r.data), staleTime: 300_000 });
   const t = tenantQ.data;
-  const pix = !!t?.onlinePaymentEnabled && (!!t?.integrations?.mercadoPago || !!t?.integrations?.abacatePay || !!t?.integrations?.creativePay);
+  const pix = !!t?.onlinePaymentEnabled && (!!t?.integrations?.mercadoPago || !!t?.integrations?.abacatePay);
   const pos = !!t?.posEnabled && !!t?.integrations?.pos;
   const [intent, setIntent] = useState<PaymentIntentDto | null>(null);
   const [open, setOpen] = useState(false);

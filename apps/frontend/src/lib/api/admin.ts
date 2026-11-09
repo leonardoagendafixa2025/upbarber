@@ -123,7 +123,8 @@ export interface AdminTenantDetail extends AdminTenantRow {
 }
 
 export interface AdminIntegrations {
-  creativePay: { configured: boolean; ok: boolean; error?: string };
+  mercadoPago: { configured: boolean; ok: boolean; clientId?: string };
+  abacatePay: { configured: boolean; ok: boolean };
   email: { configured: boolean };
   whatsapp: { configured: boolean };
   messagesLast7d: { sent: number; failed: number };
