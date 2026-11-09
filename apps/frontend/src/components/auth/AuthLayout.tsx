@@ -35,17 +35,23 @@ export function AuthLayout({
       <div className="pointer-events-none fixed inset-0 bg-grid-pattern opacity-25" />
       <div className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[550px] w-[850px] rounded-full bg-[#d4a93c]/10 blur-[150px] animate-pulse-glow" />
 
-      {/* Top Header Bar */}
-      <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between pb-4 sm:pb-6">
-        <Link to="/" className="flex items-center transition-transform hover:scale-105">
-          <img src="/logo.png?v=3" alt="UP BARBER" className="h-14 sm:h-16 w-auto object-contain drop-shadow" />
-        </Link>
+      {/* Top Header Bar com Logo Centralizada e Destacada */}
+      <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-center pb-6 sm:pb-8">
         <Link
           to="/"
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-300 backdrop-blur-md transition-all hover:border-[#d4a93c]/40 hover:bg-white/10 hover:text-[#f0cc66]"
+          className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-300 backdrop-blur-md transition-all hover:border-[#d4a93c]/40 hover:bg-white/10 hover:text-[#f0cc66]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Voltar ao site</span>
+          <span className="hidden sm:inline">Voltar ao site</span>
+        </Link>
+
+        {/* Logo Centralizada e com Maior Destaque */}
+        <Link to="/" className="flex items-center justify-center transition-transform hover:scale-105">
+          <img
+            src="/logo.png?v=3"
+            alt="UP BARBER"
+            className="h-20 sm:h-24 md:h-28 w-auto object-contain drop-shadow-[0_8px_25px_rgba(0,0,0,0.8)] filter"
+          />
         </Link>
       </header>
 
