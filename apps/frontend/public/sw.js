@@ -1,5 +1,5 @@
-const CACHE = 'connect-barber-shell-v2';
-const SHELL = ['/', '/manifest.webmanifest', '/app-icon.svg', '/logo.png'];
+const CACHE = 'connect-barber-shell-v3';
+const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png', '/logo.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
   self.skipWaiting();
