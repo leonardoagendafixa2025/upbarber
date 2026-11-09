@@ -11,6 +11,7 @@ import {
   Users,
   Wallet,
   Sparkles,
+  Crown,
 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton, StatCard } from '@/components/ui';
 import OnboardingBanner from '@/components/app/OnboardingBanner';
@@ -18,6 +19,7 @@ import { PeriodPicker, usePeriod } from '@/components/reports/PeriodPicker';
 import { colorAt, DonutChart, HBarList, TimeAreaChart } from '@/components/reports/charts';
 import { BirthdaysToday, DashboardAlerts, SpecialistsWidget, TodayAgenda } from '@/components/dashboard/DashboardWidgets';
 import { reportsApi } from '@/lib/api/reports';
+import { billingApi } from '@/lib/api/billing';
 import { errorMessage } from '@/lib/api/client';
 import { fmtDate, money, num, PAYMENT_LABEL, pct } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth.store';
@@ -29,6 +31,12 @@ export default function DashboardPage() {
   const isPro = role === 'PROFESSIONAL';
   const isManager = role === 'OWNER' || role === 'ADMIN';
   const [period, setPeriod] = usePeriod('month');
+
+  const { data: billing } = useQuery({
+    queryKey: ['billing', 'overview', current?.tenantId],
+    queryFn: () => billingApi.overview(),
+    enabled: Boolean(current?.tenantId && isManager),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['reports', 'dashboard', current?.tenantId, period.from, period.to],
@@ -42,6 +50,8 @@ export default function DashboardPage() {
   const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
 
   const todayCount = data?.todayAppointments?.length ?? 0;
+  const isTrial = current?.tenant.planStatus === 'TRIAL' || billing?.status === 'TRIAL';
+  const trialDaysLeft = billing?.trialDaysLeft ?? null;
 
   return (
     <div className="space-y-6">
@@ -86,7 +96,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-xl space-y-2">
+              <div className="max-w-md space-y-2">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-black/85 px-3 py-1 text-xs font-bold text-amber-300 shadow-sm">
                   <Sparkles className="h-3.5 w-3.5" /> DESTAQUE DO DIA
                 </div>
@@ -95,14 +105,69 @@ export default function DashboardPage() {
                     ? `${todayCount} atendimento(s) programado(s) para hoje!`
                     : 'Pronto para os atendimentos de hoje?'}
                 </h2>
-                <p className="text-sm sm:text-base font-medium text-zinc-900/90 leading-relaxed">
+                <p className="text-sm font-medium text-zinc-900/90 leading-relaxed">
                   Faturamento acumulado no período de <strong className="font-extrabold">{money(k.revenue)}</strong> com{' '}
                   <strong className="font-extrabold">{num(k.ordersCount)} comandas</strong> fechadas.
                 </p>
               </div>
 
+              {/* Card Central de Assinatura de Plano (Exclusivo quando a Barbearia estiver em Teste Grátis) */}
+              {isTrial && (
+                <div className="relative flex-1 max-w-lg rounded-2xl border-2 border-black/30 bg-black/90 p-4 text-white shadow-2xl backdrop-blur-md transition-all hover:border-black/50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-md shadow-amber-500/20">
+                        <Crown className="h-5 w-5 stroke-[2.5]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300 border border-amber-400/30">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            Teste Grátis Ativo
+                          </span>
+                          {trialDaysLeft !== null && (
+                            <span className="text-[11px] font-semibold text-zinc-300">
+                              {trialDaysLeft > 0 ? `${trialDaysLeft} dias restantes` : 'Último dia!'}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-bold text-white mt-0.5 leading-snug">
+                          Assine seu plano UP BARBER
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="hidden sm:block text-right">
+                      <span className="inline-block rounded-md bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-400/30">
+                        30% OFF 1º mês
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-xs text-zinc-300 leading-snug">
+                    Não perca o acesso à sua agenda, comandas e clientes. Ativação imediata via Mercado Pago.
+                  </p>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+                    <span className="text-xs font-medium text-zinc-300">
+                      A partir de <strong className="text-amber-300 font-bold">R$ 48,30/mês</strong>
+                    </span>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2 text-xs font-black text-black shadow-lg shadow-amber-500/25 hover:from-amber-300 hover:to-amber-400 hover:scale-[1.03] transition-all"
+                    >
+                      <Link to="/app/plano">
+                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                        Assinar Plano Oficial
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Botões de Ação Rápida dentro do Banner */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <Button
                   asChild
                   className="rounded-2xl border-none bg-black px-5 py-6 text-sm font-bold text-amber-300 shadow-lg shadow-black/30 hover:bg-zinc-900 hover:text-amber-200 transition-all hover:scale-[1.02]"
