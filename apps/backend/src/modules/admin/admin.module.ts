@@ -786,12 +786,16 @@ export class AdminService {
     return this.baileys.disconnect();
   }
 
-  testWhatsAppMessage(phone: string, message?: string) {
+  async testWhatsAppMessage(phone: string, message?: string) {
     if (!phone) throw new BadRequestException('Informe o telefone para o teste');
-    return this.baileys.sendTextMessage(
+    const res = await this.baileys.sendTextMessage(
       phone,
       message || 'Olá! Mensagem de teste do UP BARBER enviada com sucesso via Baileys!',
     );
+    if (!res.ok) {
+      throw new BadRequestException(res.error || 'Falha ao enviar mensagem no WhatsApp');
+    }
+    return res;
   }
 
   /** Situação das integrações da plataforma */

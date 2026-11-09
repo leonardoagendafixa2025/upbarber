@@ -75,6 +75,7 @@ import {
 import { authApi } from '@/lib/api/auth';
 import { billingApi } from '@/lib/api/billing';
 import { errorMessage } from '@/lib/api/client';
+import { maskPhone } from '@/components/auth/AuthLayout';
 import { fmtDate, fmtPhone, fmtRelative, money, num, ROLE_LABEL, STATUS_COLOR, STATUS_LABEL } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { useAuthStore } from '@/store/auth.store';
@@ -1409,16 +1410,25 @@ function IntegrationsSettings() {
 
   const testMsg = useMutation({
     mutationFn: () => adminApi.testWhatsAppMessage({ phone: testPhone }),
-    onSuccess: (res) => {
-      if (res.ok) {
-        toast.success('Mensagem de teste enviada com sucesso no WhatsApp!');
+    onSuccess: (res: any) => {
+      if (res?.ok) {
+        toast.success(`Mensagem enviada com sucesso para ${res.recipient || testPhone}! Verifique o WhatsApp.`);
         setTestPhone('');
       } else {
-        toast.error(res.error || 'Falha ao enviar mensagem');
+        toast.error(res?.error || 'Falha ao enviar mensagem');
       }
     },
     onError: (e) => toast.error(errorMessage(e, 'Falha ao enviar mensagem de teste')),
   });
+
+  const handleSendTest = () => {
+    const digits = testPhone.replace(/\D/g, '');
+    if (!digits || digits.length < 10) {
+      toast.error('Digite o número com DDD completo (Ex: (31) 99999-9999)');
+      return;
+    }
+    testMsg.mutate();
+  };
 
   if (isLoading) return <PageLoader />;
 
@@ -1590,21 +1600,27 @@ function IntegrationsSettings() {
                   <div className="text-xs font-semibold text-white">Testar Envio de Mensagem</div>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="(11) 99999-9999"
+                      placeholder="(31) 99999-9999"
                       value={testPhone}
-                      onChange={(e) => setTestPhone(e.target.value)}
+                      onChange={(e) => setTestPhone(maskPhone(e.target.value))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendTest();
+                        }
+                      }}
                     />
                     <Button
                       type="button"
                       size="sm"
                       loading={testMsg.isPending}
-                      onClick={() => testMsg.mutate()}
+                      onClick={handleSendTest}
                       className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66] shrink-0 font-semibold"
                     >
                       <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar Teste
                     </Button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">Envie uma mensagem de teste para verificar a entrega instantânea.</p>
+                  <p className="text-[11px] text-muted-foreground">Digite o telefone com DDD. O sistema ajusta automaticamente o formato para garantir a entrega no WhatsApp.</p>
                 </div>
               </div>
             ) : waStatus?.status === 'SCAN_QR' && waStatus.qrCode ? (
