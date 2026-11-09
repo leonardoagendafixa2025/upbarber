@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -17,8 +17,10 @@ export default function PlanPage() {
   const [params, setParams] = useSearchParams();
   const invoiceParam = params.get('invoice');
   const role = useAuthStore((s) => s.current?.role);
+  const user = useAuthStore((s) => s.user);
   const updateCurrentTenant = useAuthStore((s) => s.updateCurrentTenant);
   const isOwner = role === 'OWNER';
+  const canManage = isOwner || role === 'ADMIN' || !!user?.isSuperAdmin;
   const [confirm, setConfirm] = useState<PlanDef | null>(null);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ['billing'], queryFn: billingApi.overview });
@@ -30,9 +32,9 @@ export default function PlanPage() {
       qc.invalidateQueries({ queryKey: ['billing'] });
       if (r.checkoutUrl) {
         window.open(r.checkoutUrl, '_blank', 'noopener');
-        toast.success('Fatura gerada! Abrimos o pagamento em uma nova aba.');
+        toast.success('Fatura gerada! Abrimos o checkout oficial do Mercado Pago.');
       } else {
-        toast.info('Fatura gerada. Nossa equipe vai entrar em contato para combinar o pagamento.', { duration: 8000 });
+        toast.error('Não foi possível gerar o link de pagamento do Mercado Pago');
       }
     },
     onError: (e) => toast.error(errorMessage(e, 'Não foi possível gerar a fatura')),
@@ -42,8 +44,12 @@ export default function PlanPage() {
     mutationFn: (invoiceId: string) => billingApi.invoiceCheckout(invoiceId),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['billing'] });
-      if (r.checkoutUrl) window.open(r.checkoutUrl, '_blank', 'noopener');
-      else toast.error('Não foi possível gerar o link de pagamento');
+      if (r.checkoutUrl) {
+        window.open(r.checkoutUrl, '_blank', 'noopener');
+        toast.success('Abrindo checkout oficial do Mercado Pago...');
+      } else {
+        toast.error('Não foi possível gerar o link de pagamento');
+      }
     },
     onError: (e) => toast.error(errorMessage(e, 'Não foi possível gerar o link de pagamento')),
   });
@@ -145,28 +151,42 @@ export default function PlanPage() {
       )}
 
       {openInvoice && (
-        <div className="mt-6 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center">
-          <CreditCard className="h-5 w-5 shrink-0 text-muted-foreground" />
-          <div className="flex-1 text-sm">
-            Fatura {openInvoice.status === 'OVERDUE' ? <strong className="text-red-600">vencida</strong> : 'em aberto'} de <strong>{money(openInvoice.amount)}</strong> com vencimento em {fmtDate(openInvoice.dueDate)}.
-            {!data.onlinePayments && <span className="text-muted-foreground"> O pagamento será combinado com nossa equipe.</span>}
-            {data.onlinePayments && !isOwner && <span className="text-muted-foreground"> Somente o dono da barbearia pode pagar a fatura.</span>}
+        <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-sky-500/40 bg-[#0d0d12] p-5 shadow-lg sm:flex-row sm:items-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#009ee3]/15 text-[#009ee3] shrink-0">
+            <CreditCard className="h-6 w-6" />
           </div>
-          {data.onlinePayments && isOwner && (
-            <Button size="sm" onClick={() => pay.mutate(openInvoice.id)} loading={pay.isPending && pay.variables === openInvoice.id}>
-              Pagar agora (Pix ou cartão) <ExternalLink />
+          <div className="flex-1 text-sm">
+            <div className="font-bold text-white text-base">
+              Fatura {openInvoice.status === 'OVERDUE' ? <span className="text-red-400">Vencida</span> : 'em Aberto'} ({data.plans.find((p) => p.code === openInvoice.planCode)?.name ?? 'Plano'})
+            </div>
+            <div className="text-zinc-300 mt-0.5">
+              Valor de <strong className="text-amber-400 text-base">{money(openInvoice.amount)}</strong> com vencimento em {fmtDate(openInvoice.dueDate)}.
+            </div>
+            <p className="text-xs text-zinc-400 mt-1">
+              Pagamento oficial via Mercado Pago com ativação instantânea por Pix, Cartão de Crédito ou Boleto.
+            </p>
+          </div>
+          {canManage && (
+            <Button
+              className="bg-[#009ee3] hover:bg-[#0081ba] text-white font-bold shadow-lg shadow-blue-500/20 shrink-0"
+              onClick={() => pay.mutate(openInvoice.id)}
+              loading={pay.isPending && pay.variables === openInvoice.id}
+            >
+              <CreditCard className="h-4 w-4 mr-2" /> Pagar com Mercado Pago <ExternalLink className="h-4 w-4 ml-1.5" />
             </Button>
           )}
         </div>
       )}
 
       <h2 className="mb-1 mt-10 text-lg font-semibold">Planos</h2>
-      <p className="mb-5 text-sm text-muted-foreground">Todas as funcionalidades em todos os planos. O valor muda apenas pelo número de profissionais ativos.{!isOwner && ' Somente o dono da barbearia pode alterar o plano.'}</p>
+      <p className="mb-5 text-sm text-muted-foreground">Todas as funcionalidades em todos os planos. O valor muda apenas pelo número de profissionais ativos.</p>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {data.plans.map((p) => {
           const isCurrent = p.code === data.plan.code && !isTrial;
           const suggested = p.code === data.suggestedPlan?.code;
           const tooSmall = data.activeProfessionals > p.maxProfessionals;
+          const hasOpenInvoiceForThisPlan = openInvoice?.planCode === p.code;
+
           return (
             <Card key={p.code} className={cn('relative flex flex-col p-6', isCurrent && 'border-primary ring-1 ring-primary', suggested && !isCurrent && 'border-primary/50')}>
               <Badge className="absolute -top-3 left-5" variant="secondary">
@@ -191,8 +211,30 @@ export default function PlanPage() {
               </p>
               {tooSmall && <p className="mt-3 text-xs text-red-600">Você tem {data.activeProfessionals} profissionais ativos; este plano permite até {p.maxProfessionals}.</p>}
               <div className="flex-1" />
-              <Button className="mt-6 w-full" variant={isCurrent ? 'outline' : suggested ? 'default' : 'outline'} disabled={!isOwner || tooSmall || subscribe.isPending} onClick={() => setConfirm(p)}>
-                {isCurrent ? (openInvoice?.planCode === p.code ? 'Gerar link de pagamento' : 'Renovar') : isTrial || data.plan.code === 'TRIAL' ? 'Assinar' : 'Trocar para este'}
+              <Button
+                className={cn(
+                  'mt-6 w-full font-bold',
+                  hasOpenInvoiceForThisPlan
+                    ? 'bg-[#009ee3] hover:bg-[#0081ba] text-white shadow'
+                    : isCurrent
+                    ? 'border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66]'
+                    : 'bg-[#009ee3] hover:bg-[#0081ba] text-white',
+                )}
+                disabled={!canManage || tooSmall || subscribe.isPending}
+                onClick={() => {
+                  if (hasOpenInvoiceForThisPlan && openInvoice) {
+                    pay.mutate(openInvoice.id);
+                  } else {
+                    setConfirm(p);
+                  }
+                }}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                {hasOpenInvoiceForThisPlan
+                  ? 'Pagar Fatura (Mercado Pago)'
+                  : isCurrent
+                  ? 'Renovar com Mercado Pago'
+                  : `Assinar ${p.name}`}
               </Button>
             </Card>
           );
@@ -228,9 +270,9 @@ export default function PlanPage() {
                     {inv.paidAt && <div className="mt-0.5 text-xs text-muted-foreground">em {fmtDate(inv.paidAt)}</div>}
                   </TD>
                   <TD className="text-right">
-                    {(inv.status === 'OPEN' || inv.status === 'OVERDUE') && data.onlinePayments && isOwner && (
-                      <Button size="sm" variant="outline" onClick={() => pay.mutate(inv.id)} loading={pay.isPending && pay.variables === inv.id}>
-                        Pagar <ExternalLink />
+                    {(inv.status === 'OPEN' || inv.status === 'OVERDUE') && canManage && (
+                      <Button size="sm" className="bg-[#009ee3] hover:bg-[#0081ba] text-white font-semibold" onClick={() => pay.mutate(inv.id)} loading={pay.isPending && pay.variables === inv.id}>
+                        <CreditCard className="h-3.5 w-3.5 mr-1" /> Pagar com Mercado Pago <ExternalLink className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     )}
                   </TD>
@@ -241,18 +283,16 @@ export default function PlanPage() {
         )}
       </Section>
 
-      {!data.onlinePayments ? (
-        <p className="mt-4 text-xs text-muted-foreground">O pagamento on-line ainda não está habilitado: ao assinar, a fatura é gerada e nossa equipe entra em contato para combinar o pagamento.</p>
-      ) : (
-        <p className="mt-4 text-xs text-muted-foreground">Pagamento seguro por Pix ou cartão. O plano é liberado automaticamente assim que o pagamento é confirmado.</p>
-      )}
+      <p className="mt-4 text-xs text-muted-foreground">
+        Pagamento 100% seguro processado pelo Mercado Pago oficial (Pix, Cartão de Crédito e Boleto). O plano é ativado e liberado automaticamente na hora.
+      </p>
 
       <ConfirmDialog
         open={!!confirm}
         onOpenChange={(o) => !o && setConfirm(null)}
         title={confirm ? `Assinar o plano ${confirm.name}?` : ''}
-        description={confirm ? `Será gerada uma fatura de ${money(confirm.promoPrice)} referente ao próximo mês. Uma fatura em aberto de outro plano será cancelada.` : undefined}
-        confirmText="Gerar fatura"
+        description={confirm ? `Será gerada uma fatura de ${money(confirm.promoPrice)} no Mercado Pago oficial (Pix ou Cartão). O plano será ativado imediatamente após a confirmação do pagamento.` : undefined}
+        confirmText="Ir para o Mercado Pago"
         loading={subscribe.isPending}
         onConfirm={() => {
           if (confirm) subscribe.mutate(confirm.code);

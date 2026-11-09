@@ -22,7 +22,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MemberRole, PlanCode, PlanStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
-import { addDays } from 'date-fns';
+import { addDays, addMonths } from 'date-fns';
 import { PrismaService } from '../../core/infrastructure/database/prisma/prisma.service';
 import { money, normalizePhone, slugify } from '../../common/utils';
 import { defaultOpeningHours, defaultWorkSchedule } from '../auth/auth.service';
@@ -567,25 +567,62 @@ export class AdminService {
     return { ok: true, id, name: tenant.name };
   }
 
-  async updateTenant(id: string, body: { planCode?: PlanCode; planStatus?: PlanStatus; trialEndsAt?: string; planRenewsAt?: string; isActive?: boolean; maxProfessionals?: number; extendTrialDays?: number; name?: string; phone?: string; whatsapp?: string; email?: string; addressCity?: string; addressState?: string }) {
+  async updateTenant(
+    id: string,
+    body: {
+      planCode?: any;
+      planStatus?: any;
+      trialEndsAt?: string;
+      planRenewsAt?: string;
+      isActive?: boolean;
+      maxProfessionals?: any;
+      extendTrialDays?: any;
+      name?: string;
+      phone?: string;
+      whatsapp?: string;
+      email?: string;
+      addressCity?: string;
+      addressState?: string;
+    },
+  ) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id } });
     const data: any = {};
-    if (body.name?.trim()) data.name = body.name.trim();
-    if (body.email?.trim()) data.email = body.email.trim();
+    if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim();
+    if (body.email !== undefined) data.email = body.email && typeof body.email === 'string' && body.email.trim() ? body.email.trim().toLowerCase() : null;
     if (body.phone !== undefined) data.phone = body.phone ? normalizePhone(body.phone) : null;
     if (body.whatsapp !== undefined) data.whatsapp = body.whatsapp ? normalizePhone(body.whatsapp) : null;
-    if (body.addressCity !== undefined) data.addressCity = body.addressCity || null;
-    if (body.addressState !== undefined) data.addressState = body.addressState || null;
-    if (body.planCode) {
+    if (body.addressCity !== undefined) data.addressCity = body.addressCity && typeof body.addressCity === 'string' && body.addressCity.trim() ? body.addressCity.trim() : null;
+    if (body.addressState !== undefined) data.addressState = body.addressState && typeof body.addressState === 'string' && body.addressState.trim() ? body.addressState.trim().toUpperCase().slice(0, 2) : null;
+
+    if (body.planCode && Object.values(PlanCode).includes(body.planCode as PlanCode)) {
       data.planCode = body.planCode;
-      data.maxProfessionals = PLANS.find((p) => p.code === body.planCode)?.maxProfessionals ?? 999;
+      const plan = PLANS.find((p) => p.code === body.planCode);
+      if (plan) data.maxProfessionals = plan.maxProfessionals;
     }
-    if (body.planStatus) data.planStatus = body.planStatus;
+
+    if (body.planStatus && Object.values(PlanStatus).includes(body.planStatus as PlanStatus)) {
+      data.planStatus = body.planStatus;
+      if (body.planStatus === 'ACTIVE') {
+        data.isActive = true;
+        if (!t.planRenewsAt || t.planRenewsAt < new Date()) {
+          data.planRenewsAt = addMonths(new Date(), 1);
+        }
+      }
+    }
+
     if (body.trialEndsAt) data.trialEndsAt = new Date(body.trialEndsAt);
-    if (body.extendTrialDays) data.trialEndsAt = addDays(t.trialEndsAt ?? new Date(), body.extendTrialDays);
+    if (body.extendTrialDays !== undefined && body.extendTrialDays !== '') {
+      const days = Number(body.extendTrialDays);
+      if (!isNaN(days) && days > 0) {
+        data.trialEndsAt = addDays(t.trialEndsAt ?? new Date(), days);
+      }
+    }
     if (body.planRenewsAt) data.planRenewsAt = new Date(body.planRenewsAt);
-    if (body.isActive !== undefined) data.isActive = body.isActive;
-    if (body.maxProfessionals) data.maxProfessionals = body.maxProfessionals;
+    if (body.isActive !== undefined) data.isActive = Boolean(body.isActive);
+    if (body.maxProfessionals !== undefined && body.maxProfessionals !== null && body.maxProfessionals !== '') {
+      const num = Number(body.maxProfessionals);
+      if (!isNaN(num)) data.maxProfessionals = num;
+    }
     return this.prisma.tenant.update({ where: { id }, data });
   }
 

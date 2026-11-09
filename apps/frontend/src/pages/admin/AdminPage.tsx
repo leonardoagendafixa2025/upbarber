@@ -1064,7 +1064,21 @@ function TenantDetail() {
     );
 
   const save = () => {
-    update.mutate(form);
+    const payload: Record<string, any> = {
+      name: form.name.trim(),
+      email: form.email.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      whatsapp: form.whatsapp.trim() || undefined,
+      addressCity: form.addressCity.trim() || undefined,
+      addressState: form.addressState.trim() || undefined,
+      planCode: form.planCode,
+      planStatus: form.planStatus,
+      isActive: Boolean(form.isActive),
+    };
+    if (form.maxProfessionals !== '') {
+      payload.maxProfessionals = Number(form.maxProfessionals);
+    }
+    update.mutate(payload);
   };
 
   return (
@@ -1161,7 +1175,18 @@ function TenantDetail() {
         <Section title="Plano & Assinatura" description="Configurações de licença na plataforma">
           <div className="space-y-4">
             <Field label="Plano contratado">
-              <Select value={form.planCode} onChange={(e) => setForm((s) => ({ ...s, planCode: e.target.value }))}>
+              <Select
+                value={form.planCode}
+                onChange={(e) => {
+                  const nextCode = e.target.value;
+                  const selectedPlan = plans.find((p) => p.code === nextCode);
+                  setForm((s) => ({
+                    ...s,
+                    planCode: nextCode,
+                    maxProfessionals: selectedPlan ? String(selectedPlan.maxProfessionals) : s.maxProfessionals,
+                  }));
+                }}
+              >
                 {plans.map((p) => (
                   <option key={p.code} value={p.code}>
                     {p.name} {p.maxProfessionals < 999 ? `(até ${p.maxProfessionals} prof.)` : ''}

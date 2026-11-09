@@ -72,15 +72,8 @@ export class BillingService {
       await this.prisma.tenant.update({ where: { id: tenantId }, data: { planCode, maxProfessionals: plan.maxProfessionals } });
     }
 
-    let checkoutUrl: string | null = null;
-    if (this.enabled) {
-      try {
-        checkoutUrl = await this.ensureInvoiceCheckout(invoice, t);
-      } catch (e: any) {
-        this.logger.warn(`Checkout CreativePay falhou (${t.slug}): ${e.message}`);
-      }
-    }
-    return { invoice: { ...invoice, checkoutUrl }, checkoutUrl, manual: !checkoutUrl };
+    const checkoutUrl = await this.ensureInvoiceCheckout(invoice, t);
+    return { invoice: { ...invoice, checkoutUrl }, checkoutUrl, manual: false };
   }
 
   /** Link de pagamento de uma fatura em aberto (gera uma sessão nova quando a anterior expirou) */
@@ -223,7 +216,10 @@ export class BillingService {
     });
     if (!r.checkoutUrl) throw new BadRequestException('O Mercado Pago não devolveu o link de checkout');
     const expiresAt = r.expiresAt ?? addMinutes(new Date(), CHECKOUT_MINUTES);
-    await this.prisma.invoice.update({ where: { id: invoice.id }, data: { checkoutUrl: r.checkoutUrl, checkoutExpiresAt: expiresAt } });
+    await this.prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { checkoutUrl: r.checkoutUrl, checkoutExpiresAt: expiresAt, externalId: r.sessionId },
+    });
     return r.checkoutUrl;
   }
 
@@ -247,11 +243,10 @@ export class BillingService {
   }
 
   private async billingCustomer(t: Tenant) {
-    const email = await this.billingEmail(t);
-    if (!email) throw new BadRequestException('Cadastre o e-mail da barbearia em Configurações para gerar o link de pagamento');
+    const email = (await this.billingEmail(t)) || 'cliente@upbarber.com.br';
     const doc = this.digits(t.document);
     const phone = this.digits(t.phone);
-    return { name: t.legalName || t.name, email, ...(doc.length === 11 ? { cpf: doc } : {}), ...(phone ? { phone: phone.slice(0, 24) } : {}) };
+    return { name: t.legalName || t.name || 'Barbearia', email, ...(doc.length === 11 ? { cpf: doc } : {}), ...(phone ? { phone: phone.slice(0, 24) } : {}) };
   }
 
   private mpAccessToken(): string {
