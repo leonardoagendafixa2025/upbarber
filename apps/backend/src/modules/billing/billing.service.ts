@@ -1,27 +1,19 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PlanCode, Tenant } from '@prisma/client';
 import axios from 'axios';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { addDays, addMinutes, addMonths } from 'date-fns';
 import { PrismaService } from '../../core/infrastructure/database/prisma/prisma.service';
 import { money } from '../../common/utils';
 import { MessagingService } from '../messaging/messaging.service';
 import { PLANS, planForProfessionals } from './plans';
 
-/** Duração (minutos) da sessão de checkout hospedado no CreativePay (máximo aceito: 1440). */
+/** Duração (minutos) da sessão de checkout hospedado no Mercado Pago (máximo: 1440 = 24h). */
 const CHECKOUT_MINUTES = 1440;
 
 /**
- * Cobrança do plano das barbearias via CreativePay (checkout hospedado) e
- * pagamento online de comandas/agendamentos pelo cliente.
- *
- * CreativePay (Aplicação de API):
- * - `POST /api/v1/checkout/sessions` com `X-API-Key` → `{ session_id, checkout_url, expires_at }`.
- *   `customer.email` é obrigatório; `customer.cpf` só aceita CPF (11 dígitos).
- * - Webhook assinado com `X-CreativePay-Signature` = HMAC-SHA256(corpo, webhook_secret);
- *   corpo `{ event, order_id, payload: { order: { metadata } }, timestamp }`;
- *   eventos `order.pending`, `order.completed`, `order.refunded`.
+ * Cobrança dos planos de assinatura das barbearias via Mercado Pago (Checkout Pro / Preferência Oficial)
+ * e suporte a checkout direto de comandas.
  */
 @Injectable()
 export class BillingService {
@@ -30,7 +22,12 @@ export class BillingService {
   constructor(private prisma: PrismaService, private config: ConfigService, private messaging: MessagingService) {}
 
   get enabled() {
-    return !!((this.config.get('CREATIVE_PAY_BASE_URL') || process.env.CREATIVE_PAY_BASE_URL) && (this.config.get('CREATIVE_PAY_API_KEY') || process.env.CREATIVE_PAY_API_KEY));
+    return !!(
+      this.config.get('MP_ACCESS_TOKEN') ||
+      process.env.MP_ACCESS_TOKEN ||
+      this.config.get('MP_CLIENT_ID') ||
+      process.env.MP_CLIENT_ID
+    );
   }
 
   // ---------------- plano da barbearia ----------------
@@ -165,6 +162,7 @@ export class BillingService {
     if (!email) throw new BadRequestException('O cliente precisa ter um e-mail cadastrado para pagar online');
     const r = await this.createCheckout({
       amount: remaining,
+      title: `UP BARBER - Comanda #${order.number ?? order.id.slice(0, 8)}`,
       customer: { name: order.client?.name ?? 'Cliente', email, phone: this.digits(order.client?.phone) || undefined },
       metadata: { kind: 'ORDER', orderId, tenantId, origem: 'connect-barber' },
       returnUrl,
@@ -175,53 +173,27 @@ export class BillingService {
 
   // ---------------- webhook ----------------
   async handleWebhook(rawBody: Buffer, headers: Record<string, any>, body: any) {
-    const secret = this.config.get<string>('CREATIVE_PAY_WEBHOOK_SECRET');
-    if (secret) {
-      const sig = headers['x-creativepay-signature'] ?? headers['x-getfy-signature'];
-      if (!sig || typeof sig !== 'string') throw new UnauthorizedException('Assinatura ausente');
-      const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-      const a = Buffer.from(sig.trim().toLowerCase(), 'utf8');
-      const b = Buffer.from(expected, 'utf8');
-      if (a.length !== b.length || !timingSafeEqual(a, b)) throw new UnauthorizedException('Assinatura inválida');
-    }
-    const event: string = String(body?.event ?? '');
-    const externalId = body?.order_id != null ? String(body.order_id) : undefined;
-    let meta = this.extractMetadata(body);
-    // Versões antigas do CreativePay mandam o pedido sem metadata; o detalhe do pedido pela API traz.
-    if (!meta.invoiceId && !meta.orderId && externalId && this.enabled) {
-      try {
-        const detail = await this.fetchOrder(externalId);
-        meta = this.extractMetadata(detail);
-      } catch (e: any) {
-        this.logger.warn(`Não consegui consultar o pedido ${externalId} no CreativePay: ${e.message}`);
-      }
-    }
-    this.logger.log(`Webhook CreativePay: ${event} order=${externalId ?? '-'} kind=${meta.kind ?? '-'} invoice=${meta.invoiceId ?? '-'} comanda=${meta.orderId ?? '-'}`);
-    if (!meta.invoiceId && !meta.orderId) return { processed: false, reason: 'sem referência' };
+    const paymentId = String(body?.data?.id || body?.id || '');
+    const extRef = String(body?.data?.external_reference || body?.external_reference || '');
 
-    if (event === 'order.completed') {
-      if (meta.invoiceId) {
-        const inv = await this.prisma.invoice.findUnique({ where: { id: String(meta.invoiceId) } });
-        if (!inv) {
-          this.logger.warn(`Webhook CreativePay: fatura ${meta.invoiceId} não existe (pedido ${externalId ?? '?'})`);
-          return { processed: false, reason: 'fatura não encontrada' };
-        }
-        await this.markInvoicePaid(inv.id, externalId);
-      }
-      if (meta.orderId) await this.settleOrderPayment(String(meta.orderId), externalId, body);
-    } else if (event === 'order.pending') {
-      if (meta.invoiceId && externalId) await this.prisma.invoice.updateMany({ where: { id: String(meta.invoiceId), status: { in: ['OPEN', 'OVERDUE'] } }, data: { externalId } });
-    } else if (event === 'order.refunded' || event === 'order.cancelled') {
-      if (meta.orderId) {
-        await this.prisma.paymentIntent.updateMany({ where: { orderId: String(meta.orderId), status: 'PENDING' }, data: { status: event === 'order.refunded' ? 'REFUNDED' : 'EXPIRED', payload: body } });
-      }
-      if (meta.invoiceId && event === 'order.refunded') {
-        // estorno da assinatura: reabre a fatura; o cron de cobrança trata o vencimento
-        await this.prisma.invoice.updateMany({ where: { id: String(meta.invoiceId), status: 'PAID' }, data: { status: 'OVERDUE', paidAt: null } });
-        this.logger.warn(`Fatura ${meta.invoiceId} reaberta por estorno no CreativePay (pedido ${externalId ?? '?'})`);
+    this.logger.log(`Webhook Billing recebido: paymentId=${paymentId} extRef=${extRef}`);
+
+    if (extRef.startsWith('INVOICE:')) {
+      const invoiceId = extRef.replace('INVOICE:', '');
+      const inv = await this.prisma.invoice.findUnique({ where: { id: invoiceId } });
+      if (inv) {
+        await this.markInvoicePaid(inv.id, paymentId);
+        return { processed: true, invoiceId };
       }
     }
-    return { processed: true };
+
+    if (extRef.startsWith('ORDER:')) {
+      const orderId = extRef.replace('ORDER:', '');
+      await this.settleOrderPayment(orderId, paymentId, body);
+      return { processed: true, orderId };
+    }
+
+    return { processed: true, ignored: true };
   }
 
   private async settleOrderPayment(orderId: string, externalId: string | undefined, payload: any) {
@@ -236,7 +208,7 @@ export class BillingService {
     ]);
   }
 
-  // ---------------- CreativePay ----------------
+  // ---------------- Mercado Pago Checkout ----------------
   /** Reaproveita o link da fatura enquanto a sessão vale; senão cria uma sessão nova. */
   private async ensureInvoiceCheckout(invoice: { id: string; tenantId: string; amount: any; checkoutUrl: string | null; checkoutExpiresAt: Date | null }, tenant: Tenant) {
     const live = this.liveCheckoutUrl(invoice);
@@ -244,11 +216,12 @@ export class BillingService {
     const customer = await this.billingCustomer(tenant);
     const r = await this.createCheckout({
       amount: Number(invoice.amount),
+      title: `UP BARBER - Plano ${tenant.name}`,
       customer,
-      metadata: { kind: 'INVOICE', invoiceId: invoice.id, tenantId: invoice.tenantId, origem: 'connect-barber', barbearia: tenant.slug },
+      metadata: { kind: 'INVOICE', invoiceId: invoice.id, tenantId: invoice.tenantId, barbearia: tenant.slug },
       returnUrl: `${this.messaging.appUrl()}/app/plano?invoice=${invoice.id}`,
     });
-    if (!r.checkoutUrl) throw new BadRequestException('O CreativePay não devolveu o link de pagamento');
+    if (!r.checkoutUrl) throw new BadRequestException('O Mercado Pago não devolveu o link de checkout');
     const expiresAt = r.expiresAt ?? addMinutes(new Date(), CHECKOUT_MINUTES);
     await this.prisma.invoice.update({ where: { id: invoice.id }, data: { checkoutUrl: r.checkoutUrl, checkoutExpiresAt: expiresAt } });
     return r.checkoutUrl;
@@ -281,62 +254,81 @@ export class BillingService {
     return { name: t.legalName || t.name, email, ...(doc.length === 11 ? { cpf: doc } : {}), ...(phone ? { phone: phone.slice(0, 24) } : {}) };
   }
 
-  private cpBase() {
-    return (this.config.get<string>('CREATIVE_PAY_BASE_URL') || 'https://pay.creativenext.cloud').replace(/\/$/, '');
-  }
-
-  private cpHeaders() {
-    return { 'X-API-Key': this.config.get<string>('CREATIVE_PAY_API_KEY') ?? '', Accept: 'application/json', 'Content-Type': 'application/json' };
-  }
-
-  private async createCheckout(input: { amount: number; customer: { name: string; email: string; phone?: string; cpf?: string }; metadata: Record<string, any>; returnUrl: string }) {
-    const { data } = await axios.post(
-      `${this.cpBase()}/api/v1/checkout/sessions`,
-      { customer: input.customer, amount: money(input.amount), currency: 'BRL', metadata: input.metadata, return_url: input.returnUrl, expires_in: CHECKOUT_MINUTES },
-      { headers: this.cpHeaders(), timeout: 20000 },
+  private mpAccessToken(): string {
+    return (
+      this.config.get<string>('MP_ACCESS_TOKEN') ||
+      process.env.MP_ACCESS_TOKEN ||
+      'APP_USR-2990593078113325-110615-bc6bba97578178d7cab89507146c3329-29619203'
     );
-    const expiresAt = data?.expires_at ? new Date(data.expires_at) : null;
-    return {
-      sessionId: data?.session_id != null ? String(data.session_id) : null,
-      checkoutUrl: (data?.checkout_url as string | undefined) ?? null,
-      expiresAt: expiresAt && !isNaN(expiresAt.getTime()) ? expiresAt : null,
+  }
+
+  private async createCheckout(input: {
+    amount: number;
+    title: string;
+    customer: { name: string; email: string; phone?: string; cpf?: string };
+    metadata: Record<string, any>;
+    returnUrl: string;
+  }) {
+    const accessToken = this.mpAccessToken();
+    const cleanCpf = input.customer.cpf ? input.customer.cpf.replace(/\D/g, '') : null;
+
+    const body: any = {
+      items: [
+        {
+          title: (input.title || 'Assinatura UP BARBER').slice(0, 120),
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: Number(input.amount.toFixed(2)),
+        },
+      ],
+      payer: {
+        email: input.customer.email,
+        name: input.customer.name,
+        ...(cleanCpf && cleanCpf.length === 11 ? { identification: { type: 'CPF', number: cleanCpf } } : {}),
+      },
+      external_reference: input.metadata?.invoiceId
+        ? `INVOICE:${input.metadata.invoiceId}`
+        : (input.metadata?.orderId ? `ORDER:${input.metadata.orderId}` : 'UPBARBER'),
+      back_urls: {
+        success: input.returnUrl,
+        pending: input.returnUrl,
+        failure: input.returnUrl,
+      },
+      auto_return: 'approved',
     };
-  }
 
-  private async fetchOrder(orderId: string) {
-    const { data } = await axios.get(`${this.cpBase()}/api/v1/payments/${encodeURIComponent(orderId)}`, { headers: this.cpHeaders(), timeout: 15000 });
-    return data;
-  }
-
-  /** Procura `metadata` em qualquer nível do corpo (payload.order.metadata, payload.metadata, metadata...) */
-  private extractMetadata(obj: any): Record<string, any> {
-    const found = this.findKey(obj, 'metadata');
-    return found && typeof found === 'object' ? (found as Record<string, any>) : {};
-  }
-
-  private findKey(obj: unknown, key: string, depth = 0): unknown {
-    if (!obj || typeof obj !== 'object' || depth > 6) return undefined;
-    const direct = (obj as any)[key];
-    if (direct && typeof direct === 'object') return direct;
-    for (const v of Object.values(obj as any)) {
-      if (v && typeof v === 'object') {
-        const r = this.findKey(v, key, depth + 1);
-        if (r !== undefined) return r;
-      }
-    }
-    return undefined;
-  }
-
-  /** Testa a chave da plataforma: um pedido inexistente responde 404 quando a chave é aceita e 401 quando não é. */
-  async testConnection() {
-    if (!this.enabled) return { ok: false, error: 'CREATIVE_PAY_* não configuradas' };
     try {
-      await this.fetchOrder('teste-de-conexao');
-      return { ok: true };
+      const { data } = await axios.post('https://api.mercadopago.com/checkout/preferences', body, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 25000,
+      });
+
+      return {
+        sessionId: data?.id != null ? String(data.id) : null,
+        checkoutUrl: (data?.init_point as string | undefined) ?? null,
+        expiresAt: addMinutes(new Date(), CHECKOUT_MINUTES),
+      };
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Falha ao gerar checkout no Mercado Pago';
+      this.logger.error(`Erro ao criar Checkout Mercado Pago: ${msg}`, err?.response?.data);
+      throw new BadRequestException(`Mercado Pago: ${msg}`);
+    }
+  }
+
+  /** Testa a chave da plataforma Mercado Pago */
+  async testConnection() {
+    try {
+      const accessToken = this.mpAccessToken();
+      const { data } = await axios.get('https://api.mercadopago.com/users/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 10000,
+      });
+      return { ok: true, user: data?.nickname || data?.first_name || 'Mercado Pago Produção' };
     } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 404) return { ok: true };
-      return { ok: false, error: `CreativePay respondeu ${status ?? e.message}` };
+      return { ok: false, error: e?.response?.data?.message || e.message };
     }
   }
 }

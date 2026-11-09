@@ -59,6 +59,36 @@ export class PaymentWebhookService {
     }
 
     if (!tx) {
+      const extRef = String(body?.data?.external_reference || query?.external_reference || '');
+      if (extRef.startsWith('INVOICE:')) {
+        const invoiceId = extRef.replace('INVOICE:', '');
+        const inv = await this.prisma.invoice.findUnique({ where: { id: invoiceId } });
+        if (inv) {
+          const platformToken = process.env.MP_ACCESS_TOKEN || 'APP_USR-2990593078113325-110615-bc6bba97578178d7cab89507146c3329-29619203';
+          try {
+            const mpStatus = await this.mpProvider.getPayment(platformToken, paymentId);
+            if (mpStatus.status === 'APPROVED') {
+              await this.prisma.invoice.update({
+                where: { id: invoiceId },
+                data: { status: 'PAID', paidAt: new Date(), externalId: paymentId },
+              });
+              await this.prisma.tenant.update({
+                where: { id: inv.tenantId },
+                data: { planCode: inv.planCode, planStatus: 'ACTIVE', planRenewsAt: inv.periodEnd, isActive: true },
+              });
+              this.logger.log(`Fatura de assinatura ${invoiceId} aprovada via Mercado Pago webhook!`);
+            }
+          } catch (e: any) {
+            this.logger.warn(`Erro ao verificar fatura no MP: ${e.message}`);
+          }
+          await this.prisma.paymentWebhookEvent.update({
+            where: { id: event.id },
+            data: { processingStatus: 'PROCESSED', processedAt: new Date(), tenantId: inv.tenantId },
+          });
+          return { ok: true, invoiceProcessed: true };
+        }
+      }
+
       this.logger.warn(`Transação MP não encontrada para o paymentId: ${paymentId}`);
       await this.prisma.paymentWebhookEvent.update({
         where: { id: event.id },

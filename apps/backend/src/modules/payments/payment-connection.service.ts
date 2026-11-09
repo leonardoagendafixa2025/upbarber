@@ -51,6 +51,16 @@ export class PaymentConnectionService {
     return val?.trim() || 'gLs0ulXJ0ZvrE7WwkxBPeKkKzsDuKpbU';
   }
 
+  private mpAccessToken(): string {
+    const val = this.config.get<string>('MP_ACCESS_TOKEN') || process.env.MP_ACCESS_TOKEN;
+    return val?.trim() || 'APP_USR-2990593078113325-110615-bc6bba97578178d7cab89507146c3329-29619203';
+  }
+
+  private mpPublicKey(): string {
+    const val = this.config.get<string>('MP_PUBLIC_KEY') || process.env.MP_PUBLIC_KEY;
+    return val?.trim() || 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0';
+  }
+
   /**
    * Gera a URL oficial de autorização OAuth do Mercado Pago com state assinado anti-CSRF
    */

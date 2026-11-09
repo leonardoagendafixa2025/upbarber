@@ -133,6 +133,8 @@ export class AdminService {
         if (d.email?.fromEmail) process.env.FROM_EMAIL = d.email.fromEmail;
         if (d.mercadoPago?.clientId) process.env.MP_CLIENT_ID = d.mercadoPago.clientId;
         if (d.mercadoPago?.clientSecret) process.env.MP_CLIENT_SECRET = d.mercadoPago.clientSecret;
+        if (d.mercadoPago?.accessToken) process.env.MP_ACCESS_TOKEN = d.mercadoPago.accessToken;
+        if (d.mercadoPago?.publicKey) process.env.MP_PUBLIC_KEY = d.mercadoPago.publicKey;
         if (d.abacatePay?.apiKey) process.env.ABACATEPAY_API_KEY = d.abacatePay.apiKey;
       }
     } catch (_) {}
@@ -630,7 +632,9 @@ export class AdminService {
 
     const mercadoPago = {
       clientId: d.mercadoPago?.clientId || this.config.get('MP_CLIENT_ID') || process.env.MP_CLIENT_ID || '2990593078113325',
-      clientSecret: d.mercadoPago?.clientSecret ? '••••••••' : (this.config.get('MP_CLIENT_SECRET') ? '••••••••' : '••••••••'),
+      clientSecret: d.mercadoPago?.clientSecret ? '••••••••' : (this.config.get('MP_CLIENT_SECRET') || process.env.MP_CLIENT_SECRET ? '••••••••' : '••••••••'),
+      publicKey: d.mercadoPago?.publicKey || this.config.get('MP_PUBLIC_KEY') || process.env.MP_PUBLIC_KEY || 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
+      accessToken: d.mercadoPago?.accessToken ? '••••••••' : (this.config.get('MP_ACCESS_TOKEN') || process.env.MP_ACCESS_TOKEN ? '••••••••' : '••••••••'),
       redirectUri: 'https://up-barber.vercel.app/app/configuracoes',
       enabled: true,
     };
@@ -666,6 +670,8 @@ export class AdminService {
       mercadoPago: {
         clientId: body.mercadoPago?.clientId ?? current.mercadoPago?.clientId ?? process.env.MP_CLIENT_ID ?? '2990593078113325',
         clientSecret: body.mercadoPago?.clientSecret && !body.mercadoPago.clientSecret.includes('••') ? body.mercadoPago.clientSecret : (current.mercadoPago?.clientSecret || process.env.MP_CLIENT_SECRET || 'gLs0ulXJ0ZvrE7WwkxBPeKkKzsDuKpbU'),
+        publicKey: body.mercadoPago?.publicKey ?? current.mercadoPago?.publicKey ?? process.env.MP_PUBLIC_KEY ?? 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
+        accessToken: body.mercadoPago?.accessToken && !body.mercadoPago.accessToken.includes('••') ? body.mercadoPago.accessToken : (current.mercadoPago?.accessToken || process.env.MP_ACCESS_TOKEN || 'APP_USR-2990593078113325-110615-bc6bba97578178d7cab89507146c3329-29619203'),
       },
       abacatePay: {
         apiKey: body.abacatePay?.apiKey && !body.abacatePay.apiKey.includes('••') ? body.abacatePay.apiKey : (current.abacatePay?.apiKey || process.env.ABACATEPAY_API_KEY || ''),
@@ -691,6 +697,8 @@ export class AdminService {
     if (nextData.email.fromEmail) process.env.FROM_EMAIL = nextData.email.fromEmail;
     if (nextData.mercadoPago.clientId) process.env.MP_CLIENT_ID = nextData.mercadoPago.clientId;
     if (nextData.mercadoPago.clientSecret) process.env.MP_CLIENT_SECRET = nextData.mercadoPago.clientSecret;
+    if (nextData.mercadoPago.accessToken) process.env.MP_ACCESS_TOKEN = nextData.mercadoPago.accessToken;
+    if (nextData.mercadoPago.publicKey) process.env.MP_PUBLIC_KEY = nextData.mercadoPago.publicKey;
     if (nextData.abacatePay.apiKey) process.env.ABACATEPAY_API_KEY = nextData.abacatePay.apiKey;
 
     return { ok: true };

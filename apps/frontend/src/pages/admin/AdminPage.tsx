@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
+  Copy,
   CreditCard,
   DollarSign,
   ExternalLink,
@@ -1298,7 +1299,12 @@ function IntegrationsSettings() {
   const [form, setForm] = useState({
     whatsapp: { apiUrl: '', apiKey: '', instanceName: 'UPBARBER' },
     email: { resendApiKey: '', fromEmail: 'UP BARBER <noreply@upbarber.com.br>' },
-    mercadoPago: { clientId: '2990593078113325', clientSecret: '' },
+    mercadoPago: {
+      clientId: '2990593078113325',
+      clientSecret: '',
+      publicKey: 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
+      accessToken: '',
+    },
     abacatePay: { apiKey: '' },
     platform: { name: 'UP BARBER', supportWhatsApp: '', customDomain: '' },
   });
@@ -1318,6 +1324,8 @@ function IntegrationsSettings() {
         mercadoPago: {
           clientId: settings.mercadoPago?.clientId || '2990593078113325',
           clientSecret: settings.mercadoPago?.clientSecret || '',
+          publicKey: settings.mercadoPago?.publicKey || 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
+          accessToken: settings.mercadoPago?.accessToken || '',
         },
         abacatePay: {
           apiKey: settings.abacatePay?.apiKey || '',
@@ -1405,15 +1413,43 @@ function IntegrationsSettings() {
                 onChange={(e) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, clientSecret: e.target.value } }))}
               />
             </Field>
-            <Field label="URL de Redirecionamento Oficial (Redirect URI)" hint="Cadastre esta URL exata no painel Mercado Pago Developers">
+            <Field label="Public Key de Produção" hint="Chave pública do Mercado Pago para SDK/checkout">
               <Input
-                readOnly
-                value="https://up-barber.vercel.app/app/configuracoes"
-                className="bg-white/5 text-zinc-400 cursor-not-allowed"
+                placeholder="APP_USR-..."
+                value={form.mercadoPago.publicKey}
+                onChange={(e) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, publicKey: e.target.value } }))}
               />
             </Field>
+            <Field label="Access Token da Plataforma (Produção)" hint="Token de produção usado para faturamento das assinaturas SaaS">
+              <Input
+                type="password"
+                placeholder="APP_USR-..."
+                value={form.mercadoPago.accessToken}
+                onChange={(e) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, accessToken: e.target.value } }))}
+              />
+            </Field>
+            <Field label="URL de Redirecionamento Oficial (Redirect URI)" hint="Cadastre esta URL exata no painel Mercado Pago Developers">
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value="https://up-barber.vercel.app/app/configuracoes"
+                  className="bg-white/5 text-zinc-300 font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText('https://up-barber.vercel.app/app/configuracoes');
+                    toast.success('URL copiada para a área de transferência!');
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copiar
+                </Button>
+              </div>
+            </Field>
             <p className="text-xs text-zinc-400">
-              Cada barbearia autoriza sua própria conta via OAuth oficial e recebe os valores de Pix e Cartão diretamente, sem split e sem intermediários.
+              Cada barbearia autoriza sua própria conta via OAuth oficial e recebe os valores de Pix e Cartão diretamente, sem split e sem intermediários. As assinaturas dos planos são liquidadas diretamente na conta principal da plataforma via Mercado Pago Checkout Pro.
             </p>
           </div>
         </Card>
