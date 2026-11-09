@@ -624,7 +624,7 @@ function Integrations() {
           <Item ok={data.mercadoPago?.configured ?? true} label="Mercado Pago (OAuth 2.0)" hint={data.mercadoPago?.clientId ? `App ID: ${data.mercadoPago.clientId}` : 'Conexão multi-tenant ativa'} />
           <Item ok={data.abacatePay?.configured ?? true} label="AbacatePay (Pix)" hint="Integrado & pronto" />
           <Item ok={true} label="Comunicação Direta" hint="100% WhatsApp (E-mail desativado)" />
-          <Item ok={data.whatsapp.configured} label="WhatsApp (Baileys)" hint={data.whatsapp.configured ? 'Conectado e pronto' : 'Aguardando QR Code'} />
+          <Item ok={data.whatsapp.configured} label="WhatsApp" hint={data.whatsapp.configured ? 'Conectado e pronto' : 'Aguardando QR Code'} />
         </div>
       )}
     </Section>
@@ -1557,8 +1557,8 @@ function IntegrationsSettings() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold leading-tight">WhatsApp Nativo (Baileys)</h3>
-                <p className="text-xs text-muted-foreground">Envio direto sem custo de API externa</p>
+                <h3 className="font-semibold leading-tight">WhatsApp Oficial da Barbearia</h3>
+                <p className="text-xs text-muted-foreground">Envio automático de confirmações e lembretes aos clientes</p>
               </div>
             </div>
             {waStatus?.status === 'CONNECTED' ? (

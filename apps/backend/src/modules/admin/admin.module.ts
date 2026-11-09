@@ -790,7 +790,7 @@ export class AdminService {
     if (!phone) throw new BadRequestException('Informe o telefone para o teste');
     const res = await this.baileys.sendTextMessage(
       phone,
-      message || 'Olá! Mensagem de teste do UP BARBER enviada com sucesso via Baileys!',
+      message || 'Olá! Esta é uma mensagem de teste do UP BARBER. O WhatsApp da sua barbearia está conectado e pronto para enviar lembretes e notificações!',
     );
     if (!res.ok) {
       throw new BadRequestException(res.error || 'Falha ao enviar mensagem no WhatsApp');
