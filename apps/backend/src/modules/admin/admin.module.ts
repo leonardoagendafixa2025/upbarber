@@ -30,6 +30,7 @@ import { BillingModule } from '../billing/billing.module';
 import { BillingService } from '../billing/billing.service';
 import { MessagingModule } from '../messaging/messaging.module';
 import { MessagingService } from '../messaging/messaging.service';
+import { BaileysService } from '../messaging/baileys.service';
 import { PLANS } from '../billing/plans';
 
 @Injectable()
@@ -115,6 +116,7 @@ export class AdminService {
     private prisma: PrismaService,
     private billing: BillingService,
     private messaging: MessagingService,
+    private baileys: BaileysService,
     private config: ConfigService,
   ) {
     // Carrega configurações do banco para a memória na inicialização
@@ -772,6 +774,26 @@ export class AdminService {
     return { ok: false, error: 'O envio por e-mail foi desativado na plataforma. O UP BARBER opera 100% via WhatsApp.' };
   }
 
+  getWhatsAppStatus() {
+    return this.baileys.getStatus();
+  }
+
+  reconnectWhatsApp() {
+    return this.baileys.initConnection();
+  }
+
+  disconnectWhatsApp() {
+    return this.baileys.disconnect();
+  }
+
+  testWhatsAppMessage(phone: string, message?: string) {
+    if (!phone) throw new BadRequestException('Informe o telefone para o teste');
+    return this.baileys.sendTextMessage(
+      phone,
+      message || 'Olá! Mensagem de teste do UP BARBER enviada com sucesso via Baileys!',
+    );
+  }
+
   /** Situação das integrações da plataforma */
   async integrations() {
     const msg = this.messaging.status;
@@ -792,7 +814,7 @@ export class AdminService {
         ok: true,
       },
       email: { configured: msg.email },
-      whatsapp: { configured: msg.whatsapp },
+      whatsapp: { configured: msg.whatsapp, ...this.baileys.getStatus() },
       messagesLast7d: { sent, failed },
     };
   }
@@ -821,6 +843,11 @@ export class AdminController {
   @Patch('settings') updateSettings(@Body() body: any) { return this.admin.updateSettings(body); }
   @Post('integrations/test-whatsapp') testWhatsApp(@Body() body: any) { return this.admin.testWhatsAppConnection(body); }
   @Post('integrations/test-email') testEmail(@Body() body: any) { return this.admin.testEmailConnection(body); }
+
+  @Get('whatsapp/status') getWhatsAppStatus() { return this.admin.getWhatsAppStatus(); }
+  @Post('whatsapp/reconnect') reconnectWhatsApp() { return this.admin.reconnectWhatsApp(); }
+  @Post('whatsapp/disconnect') disconnectWhatsApp() { return this.admin.disconnectWhatsApp(); }
+  @Post('whatsapp/test') testWhatsAppMessage(@Body() body: { phone: string; message?: string }) { return this.admin.testWhatsAppMessage(body.phone, body.message); }
 }
 
 @Module({

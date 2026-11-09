@@ -158,4 +158,8 @@ export const adminApi = {
   updateSettings: async (body: Record<string, any>) => (await api.patch<any>('/admin/settings', body)).data,
   testWhatsApp: async (body?: Record<string, any>) => (await api.post<any>('/admin/integrations/test-whatsapp', body ?? {})).data,
   testEmail: async (body?: Record<string, any>) => (await api.post<any>('/admin/integrations/test-email', body ?? {})).data,
+  getWhatsAppStatus: async () => (await api.get<{ status: 'CONNECTED' | 'SCAN_QR' | 'CONNECTING' | 'DISCONNECTED'; qrCode: string | null; phone: string | null; enabled: boolean; updatedAt: string }>('/admin/whatsapp/status')).data,
+  reconnectWhatsApp: async () => (await api.post<any>('/admin/whatsapp/reconnect')).data,
+  disconnectWhatsApp: async () => (await api.post<{ ok: boolean }>('/admin/whatsapp/disconnect')).data,
+  testWhatsAppMessage: async (body: { phone: string; message?: string }) => (await api.post<{ ok: boolean; externalId?: string; error?: string }>('/admin/whatsapp/test', body)).data,
 };

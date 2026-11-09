@@ -21,11 +21,14 @@ import {
   MessageSquare,
   PieChart,
   Plus,
+  Power,
+  QrCode,
   Receipt,
   RefreshCw,
   Save,
   Scissors,
   Search,
+  Send,
   Shield,
   ShieldCheck,
   Sliders,
@@ -620,7 +623,7 @@ function Integrations() {
           <Item ok={data.mercadoPago?.configured ?? true} label="Mercado Pago (OAuth 2.0)" hint={data.mercadoPago?.clientId ? `App ID: ${data.mercadoPago.clientId}` : 'Conexão multi-tenant ativa'} />
           <Item ok={data.abacatePay?.configured ?? true} label="AbacatePay (Pix)" hint="Integrado & pronto" />
           <Item ok={true} label="Comunicação Direta" hint="100% WhatsApp (E-mail desativado)" />
-          <Item ok={data.whatsapp.configured} label="WhatsApp (Evolution)" hint={data.whatsapp.configured ? 'Instância pronta' : 'Configure a API key'} />
+          <Item ok={data.whatsapp.configured} label="WhatsApp (Baileys)" hint={data.whatsapp.configured ? 'Conectado e pronto' : 'Aguardando QR Code'} />
         </div>
       )}
     </Section>
@@ -1375,13 +1378,46 @@ function IntegrationsSettings() {
     onError: (e) => toast.error(errorMessage(e, 'Falha ao salvar configurações')),
   });
 
-  const testWa = useMutation({
-    mutationFn: () => adminApi.testWhatsApp(form.whatsapp),
-    onSuccess: (res) => {
-      if (res.ok) toast.success(`WhatsApp Conectado! Status da instância: ${res.status}`);
-      else toast.error(res.error || 'Não foi possível conectar');
+  const [testPhone, setTestPhone] = useState('');
+
+  const { data: waStatus, refetch: refetchWa, isFetching: isFetchingWa } = useQuery({
+    queryKey: ['admin-wa-status'],
+    queryFn: adminApi.getWhatsAppStatus,
+    refetchInterval: (query) => {
+      const st = query.state.data?.status;
+      return st === 'SCAN_QR' || st === 'CONNECTING' ? 3000 : 15000;
     },
-    onError: (e) => toast.error(errorMessage(e, 'Falha ao testar WhatsApp')),
+  });
+
+  const reconnectWa = useMutation({
+    mutationFn: adminApi.reconnectWhatsApp,
+    onSuccess: () => {
+      refetchWa();
+      toast.success('Gerando novo QR Code de conexão...');
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Falha ao solicitar QR Code')),
+  });
+
+  const disconnectWa = useMutation({
+    mutationFn: adminApi.disconnectWhatsApp,
+    onSuccess: () => {
+      refetchWa();
+      toast.success('WhatsApp desconectado com sucesso');
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Falha ao desconectar WhatsApp')),
+  });
+
+  const testMsg = useMutation({
+    mutationFn: () => adminApi.testWhatsAppMessage({ phone: testPhone }),
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success('Mensagem de teste enviada com sucesso no WhatsApp!');
+        setTestPhone('');
+      } else {
+        toast.error(res.error || 'Falha ao enviar mensagem');
+      }
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Falha ao enviar mensagem de teste')),
   });
 
   if (isLoading) return <PageLoader />;
@@ -1503,7 +1539,7 @@ function IntegrationsSettings() {
           </div>
         </Card>
 
-        {/* Card WhatsApp */}
+        {/* Card WhatsApp Baileys Nativo */}
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-3">
@@ -1511,28 +1547,112 @@ function IntegrationsSettings() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold leading-tight">WhatsApp (Evolution API)</h3>
-                <p className="text-xs text-muted-foreground">Envio de lembretes automáticos de agendamento</p>
+                <h3 className="font-semibold leading-tight">WhatsApp Nativo (Baileys)</h3>
+                <p className="text-xs text-muted-foreground">Envio direto sem custo de API externa</p>
               </div>
             </div>
-            {settings?.whatsapp?.enabled ? <Badge variant="default" className="bg-emerald-600">Conectado</Badge> : <Badge variant="outline">Não configurado</Badge>}
+            {waStatus?.status === 'CONNECTED' ? (
+              <Badge variant="default" className="bg-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Conectado
+              </Badge>
+            ) : waStatus?.status === 'SCAN_QR' ? (
+              <Badge variant="default" className="bg-amber-600 animate-pulse">Aguardando QR Code</Badge>
+            ) : waStatus?.status === 'CONNECTING' ? (
+              <Badge variant="outline" className="border-sky-500 text-sky-400">Conectando...</Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">Desconectado</Badge>
+            )}
           </div>
 
           <div className="space-y-4">
-            <Field label="URL da API Evolution" hint="Ex: https://api.evolution.seuservidor.com">
-              <Input placeholder="https://api.evolution..." value={form.whatsapp.apiUrl} onChange={(e) => setForm((s) => ({ ...s, whatsapp: { ...s.whatsapp, apiUrl: e.target.value } }))} />
-            </Field>
-            <Field label="Chave de API (Global API Key)">
-              <Input type="password" placeholder="Chave da API Evolution" value={form.whatsapp.apiKey} onChange={(e) => setForm((s) => ({ ...s, whatsapp: { ...s.whatsapp, apiKey: e.target.value } }))} />
-            </Field>
-            <Field label="Nome da Instância" hint="Nome da instância conectada no Evolution">
-              <Input placeholder="UPBARBER" value={form.whatsapp.instanceName} onChange={(e) => setForm((s) => ({ ...s, whatsapp: { ...s.whatsapp, instanceName: e.target.value } }))} />
-            </Field>
-            <div className="pt-2">
-              <Button type="button" variant="outline" size="sm" loading={testWa.isPending} onClick={() => testWa.mutate()}>
-                <RefreshCw className="h-4 w-4" /> Testar Conexão WhatsApp
-              </Button>
-            </div>
+            {waStatus?.status === 'CONNECTED' ? (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-sm text-emerald-300">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-white">Instância ativa e pronta para envios</div>
+                      <div className="text-xs text-emerald-400/80">Número conectado: +{waStatus.phone || 'WhatsApp Web'}</div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      loading={disconnectWa.isPending}
+                      onClick={() => disconnectWa.mutate()}
+                      className="text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                    >
+                      <Power className="mr-1.5 h-3.5 w-3.5" /> Desconectar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-white/5 bg-white/5 p-4 space-y-3">
+                  <div className="text-xs font-semibold text-white">Testar Envio de Mensagem</div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="(11) 99999-9999"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      loading={testMsg.isPending}
+                      onClick={() => testMsg.mutate()}
+                      className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66] shrink-0 font-semibold"
+                    >
+                      <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar Teste
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Envie uma mensagem de teste para verificar a entrega instantânea.</p>
+                </div>
+              </div>
+            ) : waStatus?.status === 'SCAN_QR' && waStatus.qrCode ? (
+              <div className="space-y-4 text-center">
+                <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+                  <p className="text-xs text-gray-300 mb-3">
+                    Abra o WhatsApp no seu celular &gt; <strong>Aparelhos conectados</strong> &gt; <strong>Conectar aparelho</strong> e aponte a câmera para o QR Code abaixo:
+                  </p>
+                  <img
+                    src={waStatus.qrCode}
+                    alt="WhatsApp QR Code"
+                    className="mx-auto h-64 w-64 rounded-xl border border-white/20 bg-white p-2 shadow-2xl"
+                  />
+                  <p className="mt-3 text-[11px] text-muted-foreground">O QR Code atualiza sozinho a cada minuto.</p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={reconnectWa.isPending || isFetchingWa}
+                    onClick={() => reconnectWa.mutate()}
+                  >
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Recarregar QR Code
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-center py-6">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+                  <QrCode className="h-7 w-7" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white">Nenhum WhatsApp Conectado</h4>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1">
+                    Conecte o WhatsApp da sua empresa para enviar confirmações e lembretes automáticos de agendamento diretamente para os clientes.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  loading={reconnectWa.isPending}
+                  onClick={() => reconnectWa.mutate()}
+                  className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66] font-semibold"
+                >
+                  <QrCode className="mr-1.5 h-4 w-4" /> Gerar QR Code de Conexão
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
