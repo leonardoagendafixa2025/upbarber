@@ -240,4 +240,14 @@ export class PublicService {
       cancelReason: a.cancelReason,
     };
   }
+
+  /** Informações públicas da plataforma UP BARBER (Nome, WhatsApp de Suporte, etc.) */
+  async getPlatformInfo() {
+    const row = await this.prisma.platformSetting.findUnique({ where: { id: 'global' } });
+    const d = (row?.data as any) || {};
+    return {
+      name: d.platform?.name || 'UP BARBER',
+      supportWhatsApp: d.platform?.supportWhatsApp || '',
+    };
+  }
 }

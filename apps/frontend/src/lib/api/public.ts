@@ -165,6 +165,7 @@ export const publicApi = {
   waitlist: (slug: string, payload: WaitlistPayload) => api.post(`/public/barbershops/${slug}/waitlist`, payload).then((r) => r.data),
   survey: (token: string) => api.get<PublicSurvey>(`/public/surveys/${token}`).then((r) => r.data),
   answerSurvey: (token: string, payload: { rating: number; comment?: string }) => api.post(`/public/surveys/${token}`, payload).then((r) => r.data),
+  info: () => api.get<{ name: string; supportWhatsApp: string }>('/public/info').then((r) => r.data),
 };
 
 /** Endereço em uma linha */

@@ -5,28 +5,28 @@ import { CTA, FAQ } from '@/components/site/sections';
 
 const INCLUDED = [
   'Agenda on-line 24h e site da barbearia',
-  'Lembretes automáticos por WhatsApp e e-mail',
+  'Lembretes automáticos por WhatsApp',
   'Comandas, caixa e gestão financeira',
   'Comissões, vales e consumo dos profissionais',
   'Gestão de estoque e produtos',
   'Pacotes de serviços e produtos',
   'Programa de fidelidade e clube de clientes',
-  'Notícias e promoções por WhatsApp e e-mail',
+  'Notícias e promoções por WhatsApp',
   'Aniversariantes e mensagens de retorno',
   'Lista de espera e pesquisa de satisfação',
   'Relatórios gerenciais',
   'Pagamento on-line',
   'Acesso para equipe com permissões',
-  'Suporte por WhatsApp',
+  'Suporte prioritário por WhatsApp',
 ];
 
 const BILLING_FAQ = [
   { q: 'Preciso cadastrar cartão de crédito para testar?', a: 'Não. O teste grátis de 30 dias não exige cartão. Ao final do período você escolhe o plano e gera a fatura pelo próprio painel.' },
   { q: 'Como o plano é definido?', a: 'Pelo número de profissionais ativos na barbearia. Todas as funcionalidades estão disponíveis em todos os planos.' },
   { q: 'Posso trocar de plano depois?', a: 'Sim. Você pode fazer upgrade ou downgrade a cada vencimento da fatura mensal, conforme sua equipe cresce ou diminui.' },
-  { q: 'Quais as formas de pagamento?', a: 'Pix, cartão de crédito ou boleto, pelo link de pagamento gerado no painel em Meu plano.' },
+  { q: 'Quais as formas de pagamento?', a: 'Pix, cartão de crédito ou boleto, pelo link oficial do Mercado Pago gerado no painel em Meu plano.' },
   { q: 'Existe fidelidade ou multa de cancelamento?', a: 'Não. A cobrança é mensal e você pode cancelar quando quiser, sem multa.' },
-  { q: 'O que acontece se a fatura atrasar?', a: 'Você recebe avisos por e-mail. Após 7 dias de atraso o acesso ao painel é suspenso até a regularização; seus dados continuam guardados.' },
+  { q: 'O que acontece se a fatura atrasar?', a: 'Você recebe avisos pelo painel e por WhatsApp. Após 7 dias de atraso o acesso ao painel é suspenso até a regularização; seus dados continuam 100% preservados.' },
 ];
 
 export default function PricingPage() {

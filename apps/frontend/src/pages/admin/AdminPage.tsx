@@ -26,7 +26,6 @@ import {
   Save,
   Scissors,
   Search,
-  Send,
   Shield,
   ShieldCheck,
   Sliders,
@@ -620,7 +619,7 @@ function Integrations() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Item ok={data.mercadoPago?.configured ?? true} label="Mercado Pago (OAuth 2.0)" hint={data.mercadoPago?.clientId ? `App ID: ${data.mercadoPago.clientId}` : 'Conexão multi-tenant ativa'} />
           <Item ok={data.abacatePay?.configured ?? true} label="AbacatePay (Pix)" hint="Integrado & pronto" />
-          <Item ok={data.email.configured} label="E-mail (Resend)" hint={data.email.configured ? 'Conexão ativa' : 'Configure a API key'} />
+          <Item ok={true} label="Comunicação Direta" hint="100% WhatsApp (E-mail desativado)" />
           <Item ok={data.whatsapp.configured} label="WhatsApp (Evolution)" hint={data.whatsapp.configured ? 'Instância pronta' : 'Configure a API key'} />
         </div>
       )}
@@ -1385,15 +1384,6 @@ function IntegrationsSettings() {
     onError: (e) => toast.error(errorMessage(e, 'Falha ao testar WhatsApp')),
   });
 
-  const testMail = useMutation({
-    mutationFn: () => adminApi.testEmail(form.email),
-    onSuccess: (res) => {
-      if (res.ok) toast.success(res.details || 'Chave Resend válida e pronta para envio!');
-      else toast.error(res.error || 'Falha ao validar chave');
-    },
-    onError: (e) => toast.error(errorMessage(e, 'Falha ao testar Resend')),
-  });
-
   if (isLoading) return <PageLoader />;
 
   return (
@@ -1546,33 +1536,28 @@ function IntegrationsSettings() {
           </div>
         </Card>
 
-        {/* Card E-mail */}
+        {/* Card E-mail / Comunicação */}
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-500/10 text-gray-400">
                 <Mail className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold leading-tight">E-mail Transacional (Resend)</h3>
-                <p className="text-xs text-muted-foreground">Recuperação de senha, faturas e avisos</p>
+                <h3 className="font-semibold leading-tight">E-mail Transacional</h3>
+                <p className="text-xs text-muted-foreground">Estratégia operacional sem custos de e-mail</p>
               </div>
             </div>
-            {settings?.email?.enabled ? <Badge variant="default" className="bg-emerald-600">Conectado</Badge> : <Badge variant="outline">Não configurado</Badge>}
+            <Badge variant="outline" className="border-gray-700 text-gray-400">Desativado</Badge>
           </div>
 
-          <div className="space-y-4">
-            <Field label="Chave de API do Resend (API Key)" hint="Inicia com re_...">
-              <Input type="password" placeholder="re_123456789..." value={form.email.resendApiKey} onChange={(e) => setForm((s) => ({ ...s, email: { ...s.email, resendApiKey: e.target.value } }))} />
-            </Field>
-            <Field label="Remetente dos E-mails (From)" hint="E-mail verificado na sua conta do Resend">
-              <Input placeholder="UP BARBER <noreply@upbarber.com.br>" value={form.email.fromEmail} onChange={(e) => setForm((s) => ({ ...s, email: { ...s.email, fromEmail: e.target.value } }))} />
-            </Field>
-            <div className="pt-2">
-              <Button type="button" variant="outline" size="sm" loading={testMail.isPending} onClick={() => testMail.mutate()}>
-                <Send className="h-4 w-4" /> Testar Conexão Resend
-              </Button>
-            </div>
+          <div className="space-y-3 rounded-lg border border-white/5 bg-white/5 p-4 text-xs text-gray-300">
+            <p>
+              O envio de e-mails transacionais (Resend) foi <strong className="text-white">desativado</strong> para eliminar custos adicionais e focar 100% no canal de maior conversão para barbearias: o <strong className="text-emerald-400">WhatsApp direto</strong>.
+            </p>
+            <p className="text-muted-foreground">
+              Todas as confirmações, lembretes de horário e avisos da plataforma operam via WhatsApp (Evolution API).
+            </p>
           </div>
         </Card>
 

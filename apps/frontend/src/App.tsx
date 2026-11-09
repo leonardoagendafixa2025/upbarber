@@ -11,6 +11,8 @@ import AppShell from '@/components/layout/AppShell';
 const HomePage = lazy(() => import('@/pages/site/HomePage'));
 const FeaturesPage = lazy(() => import('@/pages/site/FeaturesPage'));
 const PricingPage = lazy(() => import('@/pages/site/PricingPage'));
+const TermsPage = lazy(() => import('@/pages/site/TermsPage'));
+const PrivacyPage = lazy(() => import('@/pages/site/PrivacyPage'));
 
 // Autenticação
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -73,6 +75,8 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/funcionalidades" element={<FeaturesPage />} />
               <Route path="/precos" element={<PricingPage />} />
+              <Route path="/termos" element={<TermsPage />} />
+              <Route path="/privacidade" element={<PrivacyPage />} />
             </Route>
 
             {/* Auth */}

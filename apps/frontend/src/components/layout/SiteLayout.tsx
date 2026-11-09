@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 import { useAuthStore } from '@/store/auth.store';
+import { FloatingWhatsAppButton } from '@/components/site/FloatingWhatsAppButton';
 
 const links = [
   { to: '/', label: 'Início', end: true },
@@ -107,14 +108,25 @@ export default function SiteLayout() {
             </ul>
           </div>
           <div>
-            <div className="mb-3 text-sm font-semibold text-white">Contato</div>
+            <div className="mb-3 text-sm font-semibold text-white">Legal & Contato</div>
             <ul className="space-y-2 text-sm">
-              <li>Suporte via WhatsApp</li>
+              <li><Link to="/termos" className="hover:text-white transition-colors">Termos de Uso</Link></li>
+              <li><Link to="/privacidade" className="hover:text-white transition-colors">Política de Privacidade (LGPD)</Link></li>
+              <li className="pt-2 text-xs text-gray-400">Suporte direto via WhatsApp</li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">© {new Date().getFullYear()} UP BARBER. Todos os direitos reservados.</div>
+        <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <span>© {new Date().getFullYear()} UP BARBER. Todos os direitos reservados.</span>
+            <span>•</span>
+            <Link to="/termos" className="hover:underline">Termos</Link>
+            <span>•</span>
+            <Link to="/privacidade" className="hover:underline">Privacidade</Link>
+          </div>
+        </div>
       </footer>
+      <FloatingWhatsAppButton />
     </div>
   );
 }

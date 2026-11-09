@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell,
@@ -40,11 +40,11 @@ export const FEATURES: FeatureDef[] = [
   {
     key: 'lembretes',
     title: 'Lembrete de horários',
-    short: 'Menos faltas: o cliente recebe aviso automático por WhatsApp e e-mail antes do horário.',
+    short: 'Menos faltas: o cliente recebe aviso automático direto no WhatsApp antes do horário.',
     icon: Bell,
     color: 'bg-amber-100 text-amber-700',
     paragraphs: [
-      'Diminua o risco de esquecimentos e ausências. Ao agendar, o cliente recebe a confirmação na hora e, no prazo que você configurar, um lembrete automático por WhatsApp e e-mail.',
+      'Diminua o risco de esquecimentos e ausências. Ao agendar, o cliente recebe a confirmação na hora e, no prazo que você configurar, um lembrete automático no WhatsApp.',
       'Os textos das mensagens são personalizáveis com o nome do cliente, do profissional, data, hora e serviços.',
     ],
   },
@@ -190,7 +190,7 @@ export const FEATURES: FeatureDef[] = [
   {
     key: 'campanhas',
     title: 'Envio de notícias e promoções',
-    short: 'Mande promoções por WhatsApp e e-mail para todos ou um grupo de clientes.',
+    short: 'Mande promoções direto pelo WhatsApp para todos ou um grupo de clientes.',
     icon: Megaphone,
     color: 'bg-green-100 text-green-700',
     paragraphs: ['Precisa avisar sobre um evento ou promoção? Escolha o público (todos, inativos, aniversariantes do mês, clube) e envie. Você acompanha quem recebeu e quem leu.'],

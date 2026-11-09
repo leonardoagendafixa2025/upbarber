@@ -19,6 +19,12 @@ export class PublicController {
     return PLANS.filter((p) => p.code !== 'TRIAL');
   }
 
+  @Public() @Get('info')
+  @ApiOperation({ summary: 'Informações institucionais públicas da plataforma UP BARBER' })
+  info() {
+    return this.pub.getPlatformInfo();
+  }
+
   @Public() @Get('barbershops/:slug')
   @ApiOperation({ summary: 'Site público da barbearia' })
   site(@Param('slug') slug: string) {

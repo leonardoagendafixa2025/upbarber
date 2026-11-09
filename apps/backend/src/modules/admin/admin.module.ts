@@ -521,7 +521,7 @@ export class AdminService {
           addressDistrict: body.addressDistrict || null,
           addressZip: body.addressZip || null,
           openingHours: defaultOpeningHours(),
-          reminderChannels: ['WHATSAPP', 'EMAIL'],
+          reminderChannels: ['WHATSAPP'],
           onboardingStep: 9, // Já ativo para uso imediato
         },
       });
@@ -768,25 +768,8 @@ export class AdminService {
     }
   }
 
-  async testEmailConnection(body: { resendApiKey?: string; to?: string }) {
-    const row = await this.prisma.platformSetting.findUnique({ where: { id: 'global' } });
-    const d = (row?.data as any) || {};
-    const key = body.resendApiKey && !body.resendApiKey.includes('••') ? body.resendApiKey : (d.email?.resendApiKey || this.config.get('RESEND_API_KEY'));
-
-    if (!key) {
-      throw new BadRequestException('Chave da API do Resend é obrigatória para o teste.');
-    }
-
-    try {
-      const resp = await axios.get('https://api.resend.com/api-keys', {
-        headers: { Authorization: `Bearer ${key}` },
-        timeout: 8000,
-      });
-      return { ok: true, details: 'Chave Resend válida e conectada!' };
-    } catch (e: any) {
-      const msg = e.response?.data?.message || e.message;
-      return { ok: false, error: `Falha ao validar chave do Resend: ${msg}` };
-    }
+  async testEmailConnection(_body?: { resendApiKey?: string; to?: string }) {
+    return { ok: false, error: 'O envio por e-mail foi desativado na plataforma. O UP BARBER opera 100% via WhatsApp.' };
   }
 
   /** Situação das integrações da plataforma */

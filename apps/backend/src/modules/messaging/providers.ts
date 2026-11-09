@@ -8,35 +8,19 @@ export interface SendResult {
   error?: string;
 }
 
-/** E-mail transacional via Resend (https://resend.com) */
+/** Provedor de E-mail (Desativado conforme estratégia da plataforma focada 100% em WhatsApp) */
 @Injectable()
 export class EmailProvider {
   private readonly logger = new Logger('Email');
   constructor(private config: ConfigService) {}
 
   get enabled() {
-    return !!(this.config.get('RESEND_API_KEY') || process.env.RESEND_API_KEY);
+    return false;
   }
 
   async send(to: string, subject: string, html: string, text?: string): Promise<SendResult> {
-    const apiKey = this.config.get<string>('RESEND_API_KEY') || process.env.RESEND_API_KEY;
-    const from = this.config.get<string>('FROM_EMAIL') || process.env.FROM_EMAIL || 'UP BARBER <noreply@upbarber.com.br>';
-    if (!apiKey) {
-      this.logger.debug(`[simulado] e-mail para ${to}: ${subject}`);
-      return { ok: false, error: 'RESEND_API_KEY não configurada' };
-    }
-    try {
-      const { data } = await axios.post(
-        'https://api.resend.com/emails',
-        { from, to: [to], subject, html, text },
-        { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 15000 },
-      );
-      return { ok: true, externalId: data?.id };
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e.message;
-      this.logger.warn(`Falha e-mail para ${to}: ${msg}`);
-      return { ok: false, error: msg };
-    }
+    this.logger.debug(`[desativado] e-mail para ${to} ignorado: envio por e-mail desativado na plataforma.`);
+    return { ok: false, error: 'Envio por e-mail desativado na plataforma' };
   }
 }
 

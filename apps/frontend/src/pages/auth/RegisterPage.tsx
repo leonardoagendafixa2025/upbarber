@@ -114,7 +114,17 @@ export default function RegisterPage() {
         <Button type="submit" size="lg" className="w-full" loading={formState.isSubmitting}>
           Criar minha conta grátis
         </Button>
-        <p className="text-center text-xs text-muted-foreground">Ao criar a conta você concorda com os termos de uso e a política de privacidade.</p>
+        <p className="text-center text-xs text-muted-foreground">
+          Ao criar a conta você concorda com os{' '}
+          <Link to="/termos" target="_blank" className="text-primary underline hover:text-primary/80">
+            Termos de Uso
+          </Link>{' '}
+          e a{' '}
+          <Link to="/privacidade" target="_blank" className="text-primary underline hover:text-primary/80">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
       </form>
     </AuthLayout>
   );
