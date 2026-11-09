@@ -65,7 +65,7 @@ export function SocialProofSection() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="rounded-[2.5rem] border border-[#c9a227]/30 bg-gradient-to-r from-white/[0.05] via-white/[0.02] to-white/[0.05] p-8 sm:p-12 backdrop-blur-2xl shadow-2xl"
+          className="rounded-2xl sm:rounded-[2.5rem] border border-[#c9a227]/30 bg-gradient-to-r from-white/[0.05] via-white/[0.02] to-white/[0.05] p-5 sm:p-12 backdrop-blur-2xl shadow-2xl"
         >
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {metrics.map((m, i) => (

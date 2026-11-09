@@ -67,8 +67,8 @@ export function InteractiveShowcase() {
 
   return (
     <div className="relative mx-auto w-full max-w-7xl">
-      {/* Tab Navigation Pill Bar */}
-      <div className="flex flex-wrap items-center justify-center gap-2.5 p-1 sm:gap-3">
+      {/* Tab Navigation Pill Bar (Scroll horizontal fluido no mobile, centralizado no desktop) */}
+      <div className="flex items-center gap-2 overflow-x-auto px-1 pb-2 scrollbar-none sm:flex-wrap sm:justify-center sm:overflow-visible">
         {TABS.map((t) => {
           const isActive = activeTab === t.id;
           const Icon = t.icon;
@@ -76,13 +76,13 @@ export function InteractiveShowcase() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`relative flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold transition-all sm:text-sm ${
+              className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm ${
                 isActive
-                  ? 'border border-[#d4a93c] bg-gradient-to-r from-[#d4a93c]/20 to-[#f0cc66]/15 text-[#f0cc66] shadow-xl shadow-[#d4a93c]/15 scale-105'
+                  ? 'border border-[#d4a93c] bg-gradient-to-r from-[#d4a93c]/20 to-[#f0cc66]/15 text-[#f0cc66] shadow-xl shadow-[#d4a93c]/15 scale-[1.02] sm:scale-105'
                   : 'border border-white/10 bg-white/[0.04] text-gray-400 hover:border-white/20 hover:bg-white/[0.08] hover:text-white'
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? 'text-[#d4a93c]' : 'text-gray-400'}`} />
+              <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isActive ? 'text-[#d4a93c]' : 'text-gray-400'}`} />
               <span>{t.label}</span>
               {t.badge && (
                 <span className="hidden rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 sm:inline-block">
@@ -95,7 +95,7 @@ export function InteractiveShowcase() {
       </div>
 
       {/* Main Showcase Stage */}
-      <div className="mt-8 overflow-hidden rounded-[2.5rem] border border-[#c9a227]/40 bg-gradient-to-b from-[#161824]/95 via-[#0e1017]/95 to-[#08090d] p-5 shadow-2xl backdrop-blur-2xl md:p-10">
+      <div className="mt-6 sm:mt-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#c9a227]/40 bg-gradient-to-b from-[#161824]/95 via-[#0e1017]/95 to-[#08090d] p-4 sm:p-6 md:p-10 shadow-2xl backdrop-blur-2xl">
         {/* Showcase Header */}
         {(() => {
           const cur = TABS.find((t) => t.id === activeTab)!;

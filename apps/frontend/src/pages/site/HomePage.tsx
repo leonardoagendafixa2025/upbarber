@@ -30,9 +30,9 @@ function HeroMockup() {
   ];
 
   return (
-    <div className="relative mx-auto w-full max-w-xl">
+    <div className="relative mx-auto w-full max-w-xl px-1 sm:px-0">
       {/* Background ambient gold beams */}
-      <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-gradient-to-r from-[#d4a93c]/25 via-[#f0cc66]/20 to-emerald-500/20 blur-3xl opacity-80" />
+      <div className="pointer-events-none absolute -inset-2 sm:-inset-6 rounded-[2rem] sm:rounded-[3rem] bg-gradient-to-r from-[#d4a93c]/25 via-[#f0cc66]/20 to-emerald-500/20 blur-2xl sm:blur-3xl opacity-80" />
 
       {/* Floating Satellite Badge 1 (Top Left) */}
       <motion.div
@@ -53,42 +53,42 @@ function HeroMockup() {
       <motion.div
         animate={{ y: [0, -8, 0] }}
         transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-        className="relative overflow-hidden rounded-[2.5rem] border border-[#c9a227]/40 bg-[#12141e]/95 p-6 shadow-2xl backdrop-blur-2xl"
+        className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#c9a227]/40 bg-[#12141e]/95 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl"
       >
         {/* Header da agenda */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#d4a93c]/20 text-[#f0cc66] shadow-inner">
-              <CalendarCheck className="h-6 w-6" />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-[#d4a93c]/20 text-[#f0cc66] shadow-inner shrink-0">
+              <CalendarCheck className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2 text-sm sm:text-base font-bold text-white">
                 <span>Barbearia Imperial</span>
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-400 animate-pulse" />
               </div>
-              <div className="text-xs text-gray-400">Hoje • 3 barbeiros ativos • 28 agendados</div>
+              <div className="text-[11px] sm:text-xs text-gray-400">Hoje • 3 barbeiros • 28 agendados</div>
             </div>
           </div>
-          <span className="rounded-full border border-emerald-500/40 bg-emerald-950/50 px-3.5 py-1 text-xs font-bold text-emerald-400">
-            Agenda 96% Cheia
+          <span className="rounded-full border border-emerald-500/40 bg-emerald-950/50 px-2.5 sm:px-3.5 py-1 text-[10px] sm:text-xs font-bold text-emerald-400 shrink-0">
+            96% Cheia
           </span>
         </div>
 
         {/* Slots em tempo real */}
-        <div className="mt-5 space-y-3">
+        <div className="mt-4 sm:mt-5 space-y-2.5 sm:space-y-3">
           {slots.map((s) => (
             <div
               key={s.time}
-              className={`flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.04] p-3.5 border-l-4 ${s.border} transition-all hover:bg-white/[0.08] hover:scale-[1.01]`}
+              className={`flex items-center justify-between gap-2 rounded-xl sm:rounded-2xl border border-white/5 bg-white/[0.04] p-3 sm:p-3.5 border-l-4 ${s.border} transition-all hover:bg-white/[0.08]`}
             >
-              <div className="flex items-center gap-3.5">
-                <span className="text-xs sm:text-sm font-black text-gray-400 w-12">{s.time}</span>
-                <div>
-                  <div className="text-xs sm:text-sm font-bold text-white">{s.name}</div>
-                  <div className="text-[11px] text-gray-400">{s.service}</div>
+              <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                <span className="text-xs sm:text-sm font-black text-gray-400 w-10 sm:w-12 shrink-0">{s.time}</span>
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-white truncate">{s.name}</div>
+                  <div className="text-[10px] sm:text-[11px] text-gray-400 truncate">{s.service}</div>
                 </div>
               </div>
-              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${s.badgeColor}`}>
+              <span className={`rounded-full border px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-bold shrink-0 ${s.badgeColor}`}>
                 {s.status}
               </span>
             </div>
@@ -96,27 +96,27 @@ function HeroMockup() {
         </div>
 
         {/* Rodapé de Métricas do Dia */}
-        <div className="mt-5 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-black/50 p-4 text-center">
+        <div className="mt-4 sm:mt-5 grid grid-cols-3 divide-x divide-white/10 rounded-xl sm:rounded-2xl border border-white/10 bg-black/50 p-2.5 sm:p-4 text-center">
           <div>
-            <div className="text-lg sm:text-xl font-black text-[#f0cc66]">R$ 1.840</div>
-            <div className="text-[10px] sm:text-xs text-gray-400">Faturado Hoje</div>
+            <div className="text-base sm:text-xl font-black text-[#f0cc66]">R$ 1.840</div>
+            <div className="text-[9px] sm:text-xs text-gray-400">Faturado Hoje</div>
           </div>
           <div>
-            <div className="text-lg sm:text-xl font-black text-emerald-400">0 Faltas</div>
-            <div className="text-[10px] sm:text-xs text-gray-400">100% Confirmados</div>
+            <div className="text-base sm:text-xl font-black text-emerald-400">0 Faltas</div>
+            <div className="text-[9px] sm:text-xs text-gray-400">100% Confirm.</div>
           </div>
           <div>
-            <div className="text-lg sm:text-xl font-black text-white">4,9 ★</div>
-            <div className="text-[10px] sm:text-xs text-gray-400">Avaliação Média</div>
+            <div className="text-base sm:text-xl font-black text-white">4,9 ★</div>
+            <div className="text-[9px] sm:text-xs text-gray-400">Avaliação</div>
           </div>
         </div>
       </motion.div>
 
-      {/* Floating Satellite Badge 2 (Bottom Right) */}
+      {/* Floating Satellite Badge 2 (Bottom Right) - hidden on mobile to prevent overflow */}
       <motion.div
         animate={{ y: [0, 8, 0] }}
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        className="absolute -bottom-6 -right-4 z-20 flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-[#0e1614]/95 px-4 py-3 text-xs font-medium text-emerald-300 shadow-2xl backdrop-blur-xl"
+        className="absolute -bottom-6 -right-4 z-20 hidden sm:flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-[#0e1614]/95 px-4 py-3 text-xs font-medium text-emerald-300 shadow-2xl backdrop-blur-xl"
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
           <MessageSquare className="h-4 w-4" />
@@ -132,7 +132,7 @@ function HeroMockup() {
 
 export default function HomePage() {
   return (
-    <div className="bg-background text-foreground selection:bg-[#d4a93c]/30 selection:text-[#f0cc66]">
+    <div className="bg-background text-foreground selection:bg-[#d4a93c]/30 selection:text-[#f0cc66] overflow-x-hidden w-full max-w-full">
       {/* ── HERO SECTION WIDESCREEN ── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#060709] via-[#0d0e15] to-background pt-12 pb-24 md:pt-20 md:pb-36">
         {/* Ambient Lights & Grid Background */}
@@ -272,7 +272,7 @@ export default function HomePage() {
       </section>
 
       {/* ── DEMONSTRAÇÃO INTERATIVA DAS TELAS (SHOWCASE) ── */}
-      <section id="demonstracao" className="py-24 md:py-36 relative">
+      <section id="demonstracao" className="py-24 md:py-36 relative overflow-hidden">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -303,14 +303,14 @@ export default function HomePage() {
       <ComparisonSection />
 
       {/* ── SIMULADOR INTERATIVO DE ROI / RETORNO FINANCEIRO ── */}
-      <section className="py-24 md:py-36 relative">
+      <section className="py-24 md:py-36 relative overflow-hidden">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
           <RoiCalculator />
         </div>
       </section>
 
       {/* ── TODAS AS FUNCIONALIDADES DA PLATAFORMA ── */}
-      <section className="py-24 md:py-36 border-t border-white/5 bg-[#0a0b10] relative">
+      <section className="py-24 md:py-36 border-t border-white/5 bg-[#0a0b10] relative overflow-hidden">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -351,7 +351,7 @@ export default function HomePage() {
       <SocialProofSection />
 
       {/* ── TABELA DE PREÇOS WIDESCREEN ── */}
-      <section className="py-24 md:py-36 relative" id="precos">
+      <section className="py-24 md:py-36 relative overflow-hidden" id="precos">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
           <motion.div
             initial={{ opacity: 0, y: 25 }}

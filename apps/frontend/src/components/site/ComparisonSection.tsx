@@ -55,7 +55,7 @@ export function ComparisonSection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="relative rounded-[2rem] border border-red-500/30 bg-gradient-to-b from-red-950/25 via-black/60 to-black/90 p-7 backdrop-blur-2xl sm:p-10"
+            className="relative rounded-2xl sm:rounded-[2rem] border border-red-500/30 bg-gradient-to-b from-red-950/25 via-black/60 to-black/90 p-4 sm:p-10 backdrop-blur-2xl"
           >
             <div className="flex items-center justify-between border-b border-red-500/20 pb-5">
               <div>
@@ -89,9 +89,9 @@ export function ComparisonSection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative rounded-[2rem] border-2 border-[#d4a93c] bg-gradient-to-b from-[#1c1e2b] via-[#121319] to-black p-7 shadow-2xl shadow-[#d4a93c]/20 backdrop-blur-2xl sm:p-10"
+            className="relative rounded-2xl sm:rounded-[2rem] border-2 border-[#d4a93c] bg-gradient-to-b from-[#1c1e2b] via-[#121319] to-black p-4 sm:p-10 shadow-2xl shadow-[#d4a93c]/20 backdrop-blur-2xl"
           >
-            <div className="absolute -top-4 right-8 rounded-full bg-gradient-to-r from-[#d4a93c] to-[#f0cc66] px-5 py-1 text-xs font-black text-black shadow-xl shadow-[#d4a93c]/30">
+            <div className="absolute -top-3 sm:-top-4 right-4 sm:right-8 rounded-full bg-gradient-to-r from-[#d4a93c] to-[#f0cc66] px-3 sm:px-5 py-1 text-[10px] sm:text-xs font-black text-black shadow-xl shadow-[#d4a93c]/30">
               PRODUTIVIDADE MÁXIMA
             </div>
 

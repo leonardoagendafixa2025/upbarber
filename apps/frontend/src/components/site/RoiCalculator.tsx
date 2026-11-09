@@ -38,7 +38,7 @@ export function RoiCalculator() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.7, ease: 'easeOut' }}
-      className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-[2.5rem] border border-[#c9a227]/40 bg-gradient-to-b from-[#161822]/90 via-[#0e1017]/95 to-[#08090d] p-6 shadow-2xl backdrop-blur-2xl md:p-12 glow-gold"
+      className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#c9a227]/40 bg-gradient-to-b from-[#161822]/90 via-[#0e1017]/95 to-[#08090d] p-4 sm:p-8 md:p-12 shadow-2xl backdrop-blur-2xl glow-gold"
     >
       {/* Background auras animadas */}
       <div className="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-[#d4a93c]/15 blur-[120px] animate-pulse-glow" />
@@ -168,7 +168,7 @@ export function RoiCalculator() {
         </div>
 
         {/* Results Card (Col 5) */}
-        <div className="relative rounded-3xl border border-[#d4a93c]/50 bg-gradient-to-b from-[#1d1f2b] to-[#101117] p-7 shadow-2xl lg:col-span-5 backdrop-blur-xl">
+        <div className="relative rounded-2xl sm:rounded-3xl border border-[#d4a93c]/50 bg-gradient-to-b from-[#1d1f2b] to-[#101117] p-4 sm:p-7 shadow-2xl lg:col-span-5 backdrop-blur-xl">
           <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-500 px-3.5 py-1 text-xs font-black text-white shadow-lg shadow-emerald-500/30">
             ✓ 80% MENOS FALTAS
           </div>

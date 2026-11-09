@@ -18,11 +18,11 @@ export default function SiteLayout() {
   const token = useAuthStore((s) => s.accessToken);
   const current = useAuthStore((s) => s.current);
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background overflow-x-hidden w-full max-w-full">
       <header className="sticky top-0 z-40 border-b border-[#d4a93c]/20 bg-[#08090d]/85 backdrop-blur-xl shadow-xl shadow-black/60">
-        <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center gap-4 sm:gap-6 px-4 sm:px-6">
           <Link to="/" className="flex items-center transition-transform hover:scale-105">
-            <img src="/logo.png?v=3" alt="UP BARBER" className="h-16 w-auto object-contain drop-shadow" />
+            <img src="/logo.png?v=3" alt="UP BARBER" className="h-12 sm:h-16 w-auto object-contain drop-shadow" />
           </Link>
           <nav className="ml-4 hidden items-center gap-1 md:flex">
             {links.map((l) => (

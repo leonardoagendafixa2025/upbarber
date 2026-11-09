@@ -21,7 +21,7 @@ export function FloatingWhatsAppButton() {
   const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${message}` : `https://wa.me/?text=${message}`;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-end gap-3 font-sans">
+    <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 flex items-end gap-3 font-sans">
       {/* Tooltip / Balão de chamada */}
       {showTooltip && (
         <div className="relative hidden sm:flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-gray-900/95 px-4 py-2.5 text-xs text-white shadow-2xl backdrop-blur animate-in fade-in slide-in-from-bottom-2">
@@ -48,10 +48,10 @@ export function FloatingWhatsAppButton() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Atendimento via WhatsApp"
-        className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-emerald-950/60 transition-all duration-300 hover:scale-110 hover:bg-[#20bd5a] hover:shadow-emerald-500/40 active:scale-95"
+        className="group relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-emerald-950/60 transition-all duration-300 hover:scale-110 hover:bg-[#20bd5a] hover:shadow-emerald-500/40 active:scale-95"
       >
         <span className="absolute -inset-1 rounded-full bg-[#25D366]/40 blur-sm group-hover:blur animate-pulse" />
-        <MessageCircle className="relative h-7 w-7 fill-white stroke-none" />
+        <MessageCircle className="relative h-6 w-6 sm:h-7 sm:w-7 fill-white stroke-none" />
       </a>
     </div>
   );
