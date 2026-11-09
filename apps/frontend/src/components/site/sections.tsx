@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Bell,
   BarChart3,
@@ -210,20 +211,28 @@ export const FEATURES: FeatureDef[] = [
 export function FeatureGrid({ limit }: { limit?: number }) {
   const list = limit ? FEATURES.slice(0, limit) : FEATURES;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {list.map((f) => (
-        <Link key={f.key} to={`/funcionalidades#${f.key}`} className="group block">
-          <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#d4a93c]/40 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-[#d4a93c]/5">
-            <div className={cn('mb-3 flex h-10 w-10 items-center justify-center rounded-xl shadow-inner', f.color)}>
-              <f.icon className="h-5 w-5" />
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {list.map((f, idx) => (
+        <motion.div
+          key={f.key}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: idx * 0.05 }}
+        >
+          <Link to={`/funcionalidades#${f.key}`} className="group block h-full">
+            <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-[#d4a93c]/50 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-[#d4a93c]/10">
+              <div className={cn('mb-4 flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner', f.color)}>
+                <f.icon className="h-6 w-6" />
+              </div>
+              <div className="text-base font-bold text-white group-hover:text-[#f0cc66] transition-colors">{f.title}</div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-400">{f.short}</p>
+              <div className="mt-5 flex items-center gap-1.5 text-xs font-bold text-[#d4a93c] group-hover:translate-x-1.5 transition-transform">
+                Ver detalhes <span>→</span>
+              </div>
             </div>
-            <div className="font-bold text-white group-hover:text-[#f0cc66] transition-colors">{f.title}</div>
-            <p className="mt-1.5 text-xs leading-relaxed text-gray-400">{f.short}</p>
-            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[#d4a93c] group-hover:translate-x-1 transition-transform">
-              Ver detalhes <span>→</span>
-            </div>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
       ))}
     </div>
   );
@@ -261,44 +270,57 @@ export function Personas() {
   ];
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24 border-t border-white/5 bg-gradient-to-b from-transparent to-black/40">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-3.5 py-1 text-xs font-semibold text-[#f0cc66]">
+    <section className="relative overflow-hidden py-20 md:py-32 border-t border-white/5 bg-gradient-to-b from-transparent to-black/60">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mx-auto max-w-3xl text-center"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-4 py-1.5 text-xs font-bold text-[#f0cc66]">
             Praticidade para Todos
           </span>
-          <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">Como você vai usar o UP BARBER?</h2>
-          <p className="mt-2 text-sm text-gray-400">Escolha a opção que melhor descreve o seu papel hoje.</p>
-        </div>
+          <h2 className="mt-4 text-3xl font-black text-white sm:text-5xl tracking-tight">Como você vai usar o UP BARBER?</h2>
+          <p className="mt-3 text-base text-gray-300">Escolha a opção que melhor descreve o seu papel hoje.</p>
+        </motion.div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {items.map((p) => (
-            <Link key={p.to} to={p.to} className="group block">
-              <div
-                className={cn(
-                  'relative flex h-full flex-col justify-between rounded-3xl p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1',
-                  p.highlight
-                    ? 'border-2 border-[#d4a93c] bg-gradient-to-b from-[#1b1c26] to-[#0f1016] shadow-xl shadow-[#d4a93c]/10'
-                    : 'border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
-                )}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4a93c]/15 text-[#f0cc66]">
-                      <p.icon className="h-6 w-6" />
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
+          {items.map((p, idx) => (
+            <motion.div
+              key={p.to}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.15 }}
+            >
+              <Link to={p.to} className="group block h-full">
+                <div
+                  className={cn(
+                    'relative flex h-full flex-col justify-between rounded-[2rem] p-8 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-2',
+                    p.highlight
+                      ? 'border-2 border-[#d4a93c] bg-gradient-to-b from-[#1e202d] to-[#0f1016] shadow-2xl shadow-[#d4a93c]/15'
+                      : 'border border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]'
+                  )}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#d4a93c]/20 text-[#f0cc66]">
+                        <p.icon className="h-7 w-7" />
+                      </div>
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-gray-200">
+                        {p.badge}
+                      </span>
                     </div>
-                    <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-gray-300">
-                      {p.badge}
-                    </span>
+                    <h3 className="mt-6 text-2xl font-bold text-white group-hover:text-[#f0cc66] transition-colors">{p.title}</h3>
+                    <p className="mt-2.5 text-sm leading-relaxed text-gray-400">{p.text}</p>
                   </div>
-                  <h3 className="mt-5 text-xl font-bold text-white group-hover:text-[#f0cc66] transition-colors">{p.title}</h3>
-                  <p className="mt-2 text-xs leading-relaxed text-gray-400">{p.text}</p>
+                  <div className="mt-8 flex items-center gap-2 text-xs font-bold text-[#d4a93c] group-hover:translate-x-2 transition-transform">
+                    {p.cta} <span>→</span>
+                  </div>
                 </div>
-                <div className="mt-6 flex items-center gap-1 text-xs font-bold text-[#d4a93c] group-hover:translate-x-1 transition-transform">
-                  {p.cta} <span>→</span>
-                </div>
-              </div>
-            </Link>
+              </Link>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -395,7 +417,13 @@ export function CTA() {
       {/* Background glow auras */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[650px] rounded-full bg-[#d4a93c]/10 blur-[100px]" />
 
-      <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="relative mx-auto max-w-4xl px-4 text-center sm:px-6"
+      >
         <span className="inline-flex items-center gap-2 rounded-full border border-[#d4a93c]/40 bg-[#d4a93c]/15 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#f0cc66]">
           🚀 Comece Hoje Mesmo Sem Custos
         </span>
@@ -434,7 +462,7 @@ export function CTA() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Suporte VIP por WhatsApp
           </span>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { Check, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button, Skeleton } from '@/components/ui';
 import { billingApi } from '@/lib/api/billing';
@@ -24,13 +25,18 @@ export function PricingTable({ compact = false }: { compact?: boolean }) {
   return (
     <div className="space-y-8">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {plans.map((p) => {
+        {plans.map((p, idx) => {
           const highlight = p.code === 'P2_5' || p.name.includes('Até 5');
           const isSolo = p.code === 'P1' || p.maxProfessionals === 1;
 
           return (
-            <div
+            <motion.div
               key={p.code}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.1 }}
+              whileHover={{ y: highlight ? -10 : -6, transition: { duration: 0.2 } }}
               className={cn(
                 'relative flex flex-col justify-between rounded-3xl p-6 transition-all duration-300 backdrop-blur-xl',
                 highlight
@@ -113,7 +119,7 @@ export function PricingTable({ compact = false }: { compact?: boolean }) {
                   Sem cobrança hoje • Sem cartão
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

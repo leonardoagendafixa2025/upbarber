@@ -179,6 +179,50 @@
     border: 2px solid #ffffff;
     transition: transform 0.1s;
   }
+
+  /* ── Animações fluidas de SaaS Moderno ── */
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 32s linear infinite;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float 5s ease-in-out infinite 2s;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 0.75; transform: scale(1.06); }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 7s ease-in-out infinite;
+  }
+
+  @keyframes border-beam {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .border-beam-gold {
+    background: linear-gradient(90deg, rgba(212,169,60,0.15), rgba(240,204,102,0.8), rgba(212,169,60,0.15));
+    background-size: 200% 200%;
+    animation: border-beam 5s ease infinite;
+  }
 }
 
 /* ── Scrollbar padrão do browser (global) ── */

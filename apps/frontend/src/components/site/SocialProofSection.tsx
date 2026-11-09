@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Star, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 interface Testimonial {
@@ -56,66 +57,86 @@ export function SocialProofSection() {
   ];
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        {/* Metric Bar */}
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-white/[0.04] p-8 backdrop-blur-xl">
+    <section className="relative overflow-hidden py-20 md:py-32">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Metric Bar with Framer Motion */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="rounded-[2.5rem] border border-[#c9a227]/30 bg-gradient-to-r from-white/[0.05] via-white/[0.02] to-white/[0.05] p-8 sm:p-12 backdrop-blur-2xl shadow-2xl"
+        >
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {metrics.map((m, i) => (
               <div key={i} className="text-center sm:text-left">
-                <div className="text-3xl font-black text-[#f0cc66] sm:text-4xl lg:text-5xl">
+                <div className="text-4xl font-black text-[#f0cc66] sm:text-5xl lg:text-6xl tracking-tight">
                   {m.value}
                 </div>
-                <div className="mt-1 text-sm font-bold text-white">{m.label}</div>
-                <div className="text-xs text-gray-400">{m.detail}</div>
+                <div className="mt-2 text-base font-bold text-white">{m.label}</div>
+                <div className="text-xs text-gray-400 leading-relaxed">{m.detail}</div>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Depoimentos Header */}
-        <div className="mt-20 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-3.5 py-1 text-xs font-semibold text-[#f0cc66]">
-            <Star className="h-3.5 w-3.5 fill-[#d4a93c] text-[#d4a93c]" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mt-24 text-center"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-4 py-1.5 text-xs font-bold text-[#f0cc66]">
+            <Star className="h-4 w-4 fill-[#d4a93c] text-[#d4a93c]" />
             Aprovado por Quem Vive o Dia a Dia da Barbearia
           </span>
-          <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">
-            Quem usa recomenda e não troca por nada
+          <h2 className="mt-4 text-3xl font-black text-white sm:text-5xl lg:text-6xl tracking-tight">
+            Quem usa recomenda e{' '}
+            <span className="bg-gradient-to-r from-[#ffe494] via-[#d4a93c] to-[#f5c344] bg-clip-text text-transparent">
+              não troca por nada
+            </span>
           </h2>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-400">
+          <p className="mx-auto mt-3 max-w-2xl text-base text-gray-300">
             Veja a experiência real de quem modernizou a barbearia e colocou o negócio nos trilhos com o UP BARBER.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Testimonials Cards */}
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        {/* Testimonials Cards with staggered Framer Motion */}
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
           {TESTIMONIALS.map((t, idx) => (
-            <div
+            <motion.div
               key={idx}
-              className="relative flex flex-col justify-between rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-black/40 p-6 backdrop-blur-xl transition-all duration-300 hover:border-[#d4a93c]/40 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#d4a93c]/5"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.15 }}
+              whileHover={{ y: -8, transition: { duration: 0.2 } }}
+              className="relative flex flex-col justify-between rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.05] via-[#12131a] to-black/80 p-8 backdrop-blur-2xl shadow-xl transition-all hover:border-[#d4a93c]/50 hover:shadow-2xl hover:shadow-[#d4a93c]/10"
             >
               <div>
                 {/* Estrelas */}
-                <div className="flex items-center gap-1 text-[#f0cc66]">
+                <div className="flex items-center gap-1.5 text-[#f0cc66]">
                   {Array.from({ length: t.stars }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-[#f0cc66]" />
                   ))}
                 </div>
 
                 {/* Destaque */}
-                <div className="mt-3 text-xs font-bold uppercase tracking-wider text-[#d4a93c]">
+                <div className="mt-4 text-xs font-black uppercase tracking-wider text-[#d4a93c]">
                   {t.highlight}
                 </div>
 
                 {/* Depoimento */}
-                <p className="mt-3 text-sm leading-relaxed text-gray-300">
+                <p className="mt-3.5 text-sm sm:text-base leading-relaxed text-gray-300">
                   "{t.quote}"
                 </p>
               </div>
 
               {/* Autor */}
-              <div className="mt-6 flex items-center gap-3 border-t border-white/10 pt-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#d4a93c] to-[#92400e] text-xs font-extrabold text-white shadow-md">
+              <div className="mt-8 flex items-center gap-3.5 border-t border-white/10 pt-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d4a93c] to-[#78350f] text-sm font-black text-white shadow-lg">
                   {t.avatarText}
                 </div>
                 <div>
@@ -125,28 +146,33 @@ export function SocialProofSection() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* Garantia Selo */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-center text-xs text-gray-400 sm:justify-between sm:text-left">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-[#d4a93c] shrink-0" />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mt-14 flex flex-wrap items-center justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 text-center text-xs sm:text-sm text-gray-400 backdrop-blur-xl sm:text-left"
+        >
+          <div className="flex items-center gap-4">
+            <ShieldCheck className="h-10 w-10 text-[#d4a93c] shrink-0" />
             <div>
-              <div className="font-bold text-white">Garantia Total de Risco Zero</div>
-              <div>Teste por 30 dias grátis com acesso irrestrito a todas as funcionalidades. Sem fidelidade.</div>
+              <div className="text-base font-bold text-white">Garantia Total de Risco Zero</div>
+              <div className="text-xs text-gray-400">Teste por 30 dias grátis com acesso irrestrito a todas as funcionalidades. Sem fidelidade.</div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-gray-300">
-            <span className="flex items-center gap-1">
+          <div className="flex items-center gap-6 text-xs sm:text-sm font-semibold text-gray-300">
+            <span className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Sem cartão no cadastro
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Cancele quando quiser
             </span>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

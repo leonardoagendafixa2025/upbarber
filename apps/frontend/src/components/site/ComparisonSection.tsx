@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Check, X, Zap, AlertTriangle } from 'lucide-react';
 
 export function ComparisonSection() {
@@ -20,41 +21,56 @@ export function ComparisonSection() {
   ];
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24">
+    <section className="relative overflow-hidden py-20 md:py-32">
       {/* Background ambient light */}
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-[#d4a93c]/5 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[800px] rounded-full bg-[#d4a93c]/5 blur-[140px]" />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-950/20 px-3.5 py-1 text-xs font-semibold text-red-400">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mx-auto max-w-3xl text-center"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-950/30 px-4 py-1.5 text-xs font-bold text-red-400">
             <AlertTriangle className="h-3.5 w-3.5" />
             Por que as barbearias estão abandonando o método antigo?
           </span>
-          <h2 className="mt-4 text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl">
-            Pare de perder tempo com o que a tecnologia faz em <span className="text-[#d4a93c]">segundos</span>
+          <h2 className="mt-4 text-3xl font-black text-white sm:text-5xl lg:text-6xl tracking-tight">
+            Pare de perder tempo com o que a tecnologia faz em{' '}
+            <span className="bg-gradient-to-r from-[#ffe494] via-[#d4a93c] to-[#f5c344] bg-clip-text text-transparent">
+              segundos
+            </span>
           </h2>
-          <p className="mt-3 text-base text-gray-400">
+          <p className="mt-3 text-base text-gray-300 sm:text-lg">
             Compare o dia a dia de uma barbearia que ainda usa caderno e WhatsApp manual com quem já migrou para o UP BARBER.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-2">
+        <div className="mt-14 grid gap-8 lg:grid-cols-2">
           {/* Card Caos */}
-          <div className="relative rounded-3xl border border-red-500/20 bg-gradient-to-b from-red-950/20 to-black/60 p-6 backdrop-blur-xl sm:p-8">
-            <div className="flex items-center justify-between border-b border-red-500/20 pb-4">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="relative rounded-[2rem] border border-red-500/30 bg-gradient-to-b from-red-950/25 via-black/60 to-black/90 p-7 backdrop-blur-2xl sm:p-10"
+          >
+            <div className="flex items-center justify-between border-b border-red-500/20 pb-5">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-red-400">Método Tradicional</span>
-                <h3 className="text-xl font-bold text-white">Caderno, Planilhas & WhatsApp Pessoal</h3>
+                <h3 className="text-2xl font-black text-white">Caderno, Planilhas & WhatsApp Pessoal</h3>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/20 text-red-400">
-                <X className="h-6 w-6" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30">
+                <X className="h-7 w-7" />
               </div>
             </div>
 
-            <ul className="mt-6 space-y-4">
+            <ul className="mt-8 space-y-4">
               {painPoints.map((pain, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-950 text-red-400 border border-red-800/60">
+                <li key={i} className="flex items-start gap-3.5 text-sm sm:text-base text-gray-300">
+                  <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-950 text-red-400 border border-red-800/60">
                     <X className="h-3.5 w-3.5" />
                   </div>
                   <span className="leading-snug">{pain}</span>
@@ -62,31 +78,37 @@ export function ComparisonSection() {
               ))}
             </ul>
 
-            <div className="mt-8 rounded-2xl border border-red-900/40 bg-red-950/40 p-4 text-center text-xs font-semibold text-red-300">
+            <div className="mt-8 rounded-2xl border border-red-900/50 bg-red-950/40 p-4 text-center text-xs sm:text-sm font-bold text-red-300">
               Resultado: Estresse diário, faturamento vazando e clientes frustrados.
             </div>
-          </div>
+          </motion.div>
 
           {/* Card UP BARBER */}
-          <div className="relative rounded-3xl border border-[#d4a93c]/50 bg-gradient-to-b from-[#1a1b24] via-[#121319] to-black p-6 shadow-2xl shadow-[#d4a93c]/10 backdrop-blur-xl sm:p-8">
-            <div className="absolute -top-3.5 right-6 rounded-full bg-gradient-to-r from-[#d4a93c] to-[#f0cc66] px-4 py-1 text-xs font-extrabold text-black shadow-lg">
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative rounded-[2rem] border-2 border-[#d4a93c] bg-gradient-to-b from-[#1c1e2b] via-[#121319] to-black p-7 shadow-2xl shadow-[#d4a93c]/20 backdrop-blur-2xl sm:p-10"
+          >
+            <div className="absolute -top-4 right-8 rounded-full bg-gradient-to-r from-[#d4a93c] to-[#f0cc66] px-5 py-1 text-xs font-black text-black shadow-xl shadow-[#d4a93c]/30">
               PRODUTIVIDADE MÁXIMA
             </div>
 
-            <div className="flex items-center justify-between border-b border-[#d4a93c]/30 pb-4">
+            <div className="flex items-center justify-between border-b border-[#d4a93c]/30 pb-5">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#d4a93c]">Com o UP BARBER</span>
-                <h3 className="text-xl font-bold text-white">Sua Barbearia no Piloto Automático</h3>
+                <h3 className="text-2xl font-black text-white">Sua Barbearia no Piloto Automático</h3>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4a93c]/20 text-[#f0cc66]">
-                <Zap className="h-6 w-6" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4a93c]/20 text-[#f0cc66] border border-[#d4a93c]/40">
+                <Zap className="h-7 w-7" />
               </div>
             </div>
 
-            <ul className="mt-6 space-y-4">
+            <ul className="mt-8 space-y-4">
               {upBarberWins.map((win, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-gray-200">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+                <li key={i} className="flex items-start gap-3.5 text-sm sm:text-base text-gray-200">
+                  <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/50">
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <span className="leading-snug">{win}</span>
@@ -94,10 +116,10 @@ export function ComparisonSection() {
               ))}
             </ul>
 
-            <div className="mt-8 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-4 text-center text-xs font-semibold text-emerald-300">
+            <div className="mt-8 rounded-2xl border border-emerald-500/50 bg-emerald-950/50 p-4 text-center text-xs sm:text-sm font-bold text-emerald-300">
               Resultado: Mais tempo para você, barbeiros motivados e faturamento até 40% maior.
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
