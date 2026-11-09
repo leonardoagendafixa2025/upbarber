@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarClock, Check, CheckCircle2, CreditCard, ExternalLink, Info, Lightbulb, RefreshCw, Users, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Check, CheckCircle2, CreditCard, ExternalLink, FlaskConical, Info, Lightbulb, RefreshCw, Users, X } from 'lucide-react';
 import { Badge, Button, Card, ConfirmDialog, EmptyState, PageHeader, PageLoader, Section, StatCard, Table, TBody, TD, TH, THead, TR } from '@/components/ui';
 import { billingApi, PlanDef } from '@/lib/api/billing';
 import { errorMessage } from '@/lib/api/client';
@@ -81,6 +81,21 @@ export default function PlanPage() {
   return (
     <div>
       <PageHeader title="Meu plano" description="Assinatura do UP BARBER, faturas e pagamentos." />
+
+      {data.isSandbox && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200">
+          <FlaskConical className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
+          <div className="text-sm">
+            <span className="font-bold text-amber-300">Modo de Testes (Sandbox) do Mercado Pago Ativo:</span>
+            <p className="text-xs text-amber-200/90 mt-1">
+              Você pode simular aprovação de pagamentos usando cartões de teste do Mercado Pago (ex: titular APRO, final 3311) sem débito bancário real.
+              <strong className="block mt-1 text-white">
+                Dica importante: abra o checkout de teste em uma aba anônima para que o Mercado Pago não barre por auto-pagamento com a sua conta de desenvolvedor.
+              </strong>
+            </p>
+          </div>
+        </div>
+      )}
 
       {invoiceParam && (
         <div className={cn('mb-6 flex items-start gap-3 rounded-xl border p-4', returnedInvoice?.status === 'PAID' ? 'border-emerald-200 bg-emerald-50' : 'border-sky-200 bg-sky-50')}>
@@ -167,13 +182,29 @@ export default function PlanPage() {
             </p>
           </div>
           {canManage && (
-            <Button
-              className="bg-[#009ee3] hover:bg-[#0081ba] text-white font-bold shadow-lg shadow-blue-500/20 shrink-0"
-              onClick={() => pay.mutate(openInvoice.id)}
-              loading={pay.isPending && pay.variables === openInvoice.id}
-            >
-              <CreditCard className="h-4 w-4 mr-2" /> Pagar com Mercado Pago <ExternalLink className="h-4 w-4 ml-1.5" />
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                className="bg-[#009ee3] hover:bg-[#0081ba] text-white font-bold shadow-lg shadow-blue-500/20"
+                onClick={() => pay.mutate(openInvoice.id)}
+                loading={pay.isPending && pay.variables === openInvoice.id}
+              >
+                <CreditCard className="h-4 w-4 mr-2" /> Pagar com Mercado Pago <ExternalLink className="h-4 w-4 ml-1.5" />
+              </Button>
+              {openInvoice.sandboxCheckoutUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-amber-400/40 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 text-xs font-semibold"
+                  onClick={() => {
+                    window.open(openInvoice.sandboxCheckoutUrl!, '_blank', 'noopener');
+                    toast.info('Abrindo Sandbox do Mercado Pago. Dica: abra em aba anônima se você for o dono das credenciais.');
+                  }}
+                >
+                  <FlaskConical className="h-3.5 w-3.5 mr-1.5" /> Testar no Sandbox
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}

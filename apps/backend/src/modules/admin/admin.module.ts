@@ -672,6 +672,7 @@ export class AdminService {
       clientSecret: d.mercadoPago?.clientSecret ? '••••••••' : (this.config.get('MP_CLIENT_SECRET') || process.env.MP_CLIENT_SECRET ? '••••••••' : '••••••••'),
       publicKey: d.mercadoPago?.publicKey || this.config.get('MP_PUBLIC_KEY') || process.env.MP_PUBLIC_KEY || 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
       accessToken: d.mercadoPago?.accessToken ? '••••••••' : (this.config.get('MP_ACCESS_TOKEN') || process.env.MP_ACCESS_TOKEN ? '••••••••' : '••••••••'),
+      sandbox: Boolean(d.mercadoPago?.sandbox ?? (process.env.MP_SANDBOX === 'true')),
       redirectUri: 'https://up-barber.vercel.app/app/configuracoes',
       enabled: true,
     };
@@ -709,6 +710,7 @@ export class AdminService {
         clientSecret: body.mercadoPago?.clientSecret && !body.mercadoPago.clientSecret.includes('••') ? body.mercadoPago.clientSecret : (current.mercadoPago?.clientSecret || process.env.MP_CLIENT_SECRET || 'gLs0ulXJ0ZvrE7WwkxBPeKkKzsDuKpbU'),
         publicKey: body.mercadoPago?.publicKey ?? current.mercadoPago?.publicKey ?? process.env.MP_PUBLIC_KEY ?? 'APP_USR-a65c62d1-9562-45d1-a6f0-38fadfb7bfd0',
         accessToken: body.mercadoPago?.accessToken && !body.mercadoPago.accessToken.includes('••') ? body.mercadoPago.accessToken : (current.mercadoPago?.accessToken || process.env.MP_ACCESS_TOKEN || 'APP_USR-2990593078113325-110615-bc6bba97578178d7cab89507146c3329-29619203'),
+        sandbox: typeof body.mercadoPago?.sandbox === 'boolean' ? body.mercadoPago.sandbox : (current.mercadoPago?.sandbox ?? false),
       },
       abacatePay: {
         apiKey: body.abacatePay?.apiKey && !body.abacatePay.apiKey.includes('••') ? body.abacatePay.apiKey : (current.abacatePay?.apiKey || process.env.ABACATEPAY_API_KEY || ''),
@@ -736,6 +738,7 @@ export class AdminService {
     if (nextData.mercadoPago.clientSecret) process.env.MP_CLIENT_SECRET = nextData.mercadoPago.clientSecret;
     if (nextData.mercadoPago.accessToken) process.env.MP_ACCESS_TOKEN = nextData.mercadoPago.accessToken;
     if (nextData.mercadoPago.publicKey) process.env.MP_PUBLIC_KEY = nextData.mercadoPago.publicKey;
+    process.env.MP_SANDBOX = nextData.mercadoPago.sandbox ? 'true' : 'false';
     if (nextData.abacatePay.apiKey) process.env.ABACATEPAY_API_KEY = nextData.abacatePay.apiKey;
 
     return { ok: true };

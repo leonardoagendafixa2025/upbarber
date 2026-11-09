@@ -20,6 +20,7 @@ export interface Invoice {
   status: 'OPEN' | 'PAID' | 'OVERDUE' | 'CANCELLED';
   paidAt: string | null;
   checkoutUrl: string | null;
+  sandboxCheckoutUrl?: string | null;
 }
 
 export interface BillingOverview {
@@ -33,12 +34,13 @@ export interface BillingOverview {
   plans: PlanDef[];
   invoices: Invoice[];
   onlinePayments: boolean;
+  isSandbox?: boolean;
 }
 
 export const billingApi = {
   plans: async () => (await api.get<PlanDef[]>('/public/plans')).data,
   overview: async () => (await api.get<BillingOverview>('/billing')).data,
-  subscribe: async (planCode: string) => (await api.post<{ invoice: Invoice; checkoutUrl: string | null; manual?: boolean }>('/billing/subscribe', { planCode })).data,
+  subscribe: async (planCode: string) => (await api.post<{ invoice: Invoice; checkoutUrl: string | null; sandboxCheckoutUrl?: string | null; isSandbox?: boolean; manual?: boolean }>('/billing/subscribe', { planCode })).data,
   /** Gera (ou reaproveita) o link de pagamento de uma fatura em aberto */
-  invoiceCheckout: async (invoiceId: string) => (await api.post<{ checkoutUrl: string; invoiceId: string }>(`/billing/invoices/${invoiceId}/checkout`)).data,
+  invoiceCheckout: async (invoiceId: string) => (await api.post<{ checkoutUrl: string; sandboxCheckoutUrl?: string | null; isSandbox?: boolean; invoiceId: string }>(`/billing/invoices/${invoiceId}/checkout`)).data,
 };
