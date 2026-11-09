@@ -140,7 +140,7 @@ function SiteForm({ tenant }: { tenant: Tenant }) {
           </>
         }
       />
-      <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6">
         <Section title="Endereço e publicação">
           <Field label="Endereço da sua página" error={formState.errors.slug?.message} hint={slug !== tenant.slug ? 'Atenção: o link antigo deixará de funcionar.' : undefined}>
             <div className="flex items-center overflow-hidden rounded-md border focus-within:ring-2 focus-within:ring-ring">

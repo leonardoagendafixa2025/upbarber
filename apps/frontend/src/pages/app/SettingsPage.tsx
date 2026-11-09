@@ -104,7 +104,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Conteúdo da Aba Ativa */}
-          <div className="max-w-5xl">
+          <div className="w-full">
             {tab === 'dados' && <BusinessInfoForm tenant={tenant} />}
             {tab === 'horario' && <OpeningHoursForm tenant={tenant} />}
             {tab === 'agendamento' && <BookingSettingsForm tenant={tenant} />}
