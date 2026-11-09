@@ -104,6 +104,81 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* ── Efeitos visuais modernos da Landing Page ── */
+  .bg-grid-pattern {
+    background-size: 32px 32px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 50px -10px rgba(201, 162, 39, 0.35);
+  }
+
+  .glow-gold-sm {
+    box-shadow: 0 0 25px -5px rgba(201, 162, 39, 0.25);
+  }
+
+  .glow-emerald-sm {
+    box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+  }
+
+  .glass-card {
+    background: rgba(18, 19, 24, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-card-hover {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-card-hover:hover {
+    background: rgba(24, 25, 32, 0.85);
+    border-color: rgba(201, 162, 39, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5), 0 0 30px -10px rgba(201, 162, 39, 0.15);
+  }
+
+  /* Slider estilizado para simulador de ROI */
+  input[type='range'].gold-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    transition: background 0.2s;
+  }
+  input[type='range'].gold-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #d4a93c;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(212, 169, 60, 0.6);
+    border: 2px solid #ffffff;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  input[type='range'].gold-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 18px rgba(212, 169, 60, 0.9);
+  }
+  input[type='range'].gold-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #d4a93c;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(212, 169, 60, 0.6);
+    border: 2px solid #ffffff;
+    transition: transform 0.1s;
+  }
 }
 
 /* ── Scrollbar padrão do browser (global) ── */

@@ -19,9 +19,9 @@ export default function SiteLayout() {
   const current = useAuthStore((s) => s.current);
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-[#b8942a]/30 bg-gray-950 shadow-lg shadow-black/50">
+      <header className="sticky top-0 z-40 border-b border-[#d4a93c]/20 bg-[#08090d]/85 backdrop-blur-xl shadow-xl shadow-black/60">
         <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6">
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center transition-transform hover:scale-105">
             <img src="/logo.png?v=3" alt="UP BARBER" className="h-16 w-auto object-contain drop-shadow" />
           </Link>
           <nav className="ml-4 hidden items-center gap-1 md:flex">
@@ -32,10 +32,10 @@ export default function SiteLayout() {
                 end={l.end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-md px-3 py-2 text-sm font-semibold tracking-wide transition-colors',
+                    'rounded-lg px-3.5 py-2 text-sm font-semibold tracking-wide transition-all',
                     isActive
-                      ? 'text-[#d4a93c] underline underline-offset-4'
-                      : 'text-[#c9a227] hover:text-[#f0cc66]',
+                      ? 'bg-[#d4a93c]/15 text-[#f0cc66] shadow-sm'
+                      : 'text-gray-300 hover:bg-white/5 hover:text-white',
                   )
                 }
               >
@@ -43,45 +43,47 @@ export default function SiteLayout() {
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto hidden items-center gap-2 md:flex">
+          <div className="ml-auto hidden items-center gap-3 md:flex">
             {token ? (
-              <Button asChild className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66]">
+              <Button asChild className="border border-[#f0cc66] bg-gradient-to-r from-[#d4a93c] to-[#c9a227] font-bold text-black shadow-md shadow-[#d4a93c]/20 hover:from-[#f0cc66] hover:to-[#d4a93c]">
                 <Link to={current ? '/app' : '/cliente'}>Acessar painel</Link>
               </Button>
             ) : (
               <>
-                <Button variant="ghost" asChild className="text-[#c9a227] hover:bg-white/10 hover:text-[#f0cc66]">
+                <Button variant="ghost" asChild className="text-gray-300 hover:bg-white/10 hover:text-white text-xs font-semibold">
                   <Link to="/cliente/login">Sou cliente</Link>
                 </Button>
-                <Button variant="outline" asChild className="border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227]/10 hover:text-[#f0cc66]">
+                <Button variant="outline" asChild className="border-white/20 bg-white/5 text-gray-200 hover:border-[#d4a93c]/50 hover:bg-[#d4a93c]/10 hover:text-[#f0cc66] text-xs font-semibold">
                   <Link to="/login">Acessar</Link>
                 </Button>
-                <Button asChild className="border-[#c9a227] bg-[#c9a227] text-black hover:bg-[#f0cc66]">
+                <Button asChild className="border border-[#f0cc66] bg-gradient-to-r from-[#d4a93c] via-[#e5b842] to-[#c9a227] font-extrabold text-black shadow-lg shadow-[#d4a93c]/20 hover:from-[#f0cc66] hover:to-[#d4a93c] transition-all transform hover:scale-[1.02]">
                   <Link to="/cadastro">Teste grátis 30 dias</Link>
                 </Button>
               </>
             )}
           </div>
-          <button className="ml-auto text-[#c9a227] hover:text-[#f0cc66] md:hidden" onClick={() => setOpen(!open)}>
+          <button className="ml-auto text-[#d4a93c] hover:text-[#f0cc66] md:hidden p-2 rounded-lg bg-white/5" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
         {open && (
-          <div className="border-t border-[#b8942a]/30 bg-gray-950 px-4 py-3 md:hidden">
-            {links.map((l) => (
-              <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm font-semibold text-[#c9a227] hover:text-[#f0cc66]">
-                {l.label}
-              </Link>
-            ))}
-            <div className="mt-2 flex flex-col gap-2">
-              <Button variant="ghost" asChild className="text-[#c9a227] hover:bg-white/10">
-                <Link to="/cliente/login">Sou cliente</Link>
+          <div className="border-t border-[#d4a93c]/20 bg-[#0d0e14] px-4 py-4 md:hidden space-y-3">
+            <div className="space-y-1">
+              {links.map((l) => (
+                <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-white/10 hover:text-[#f0cc66]">
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+            <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+              <Button variant="ghost" asChild className="text-gray-300 hover:bg-white/10 justify-start">
+                <Link to="/cliente/login" onClick={() => setOpen(false)}>Sou cliente</Link>
               </Button>
-              <Button variant="outline" asChild className="border-[#c9a227] text-[#c9a227]">
-                <Link to="/login">Acessar</Link>
+              <Button variant="outline" asChild className="border-white/20 text-gray-200 justify-start">
+                <Link to="/login" onClick={() => setOpen(false)}>Acessar</Link>
               </Button>
-              <Button asChild className="bg-[#c9a227] text-black hover:bg-[#f0cc66]">
-                <Link to="/cadastro">Teste grátis 30 dias</Link>
+              <Button asChild className="bg-gradient-to-r from-[#d4a93c] to-[#c9a227] text-black font-bold">
+                <Link to="/cadastro" onClick={() => setOpen(false)}>Teste grátis 30 dias</Link>
               </Button>
             </div>
           </div>

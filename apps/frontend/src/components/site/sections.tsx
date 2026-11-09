@@ -23,7 +23,6 @@ import {
   UserRound,
   Smartphone,
 } from 'lucide-react';
-import { Card } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 
 export interface FeatureDef {
@@ -213,15 +212,17 @@ export function FeatureGrid({ limit }: { limit?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {list.map((f) => (
-        <Link key={f.key} to={`/funcionalidades#${f.key}`} className="group">
-          <Card className="h-full p-5 transition-shadow group-hover:shadow-md">
-            <div className={cn('mb-3 flex h-10 w-10 items-center justify-center rounded-lg', f.color)}>
+        <Link key={f.key} to={`/funcionalidades#${f.key}`} className="group block">
+          <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#d4a93c]/40 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-[#d4a93c]/5">
+            <div className={cn('mb-3 flex h-10 w-10 items-center justify-center rounded-xl shadow-inner', f.color)}>
               <f.icon className="h-5 w-5" />
             </div>
-            <div className="font-semibold">{f.title}</div>
-            <p className="mt-1 text-sm text-muted-foreground">{f.short}</p>
-            <div className="mt-3 text-xs font-medium text-primary">Ver detalhes →</div>
-          </Card>
+            <div className="font-bold text-white group-hover:text-[#f0cc66] transition-colors">{f.title}</div>
+            <p className="mt-1.5 text-xs leading-relaxed text-gray-400">{f.short}</p>
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[#d4a93c] group-hover:translate-x-1 transition-transform">
+              Ver detalhes <span>→</span>
+            </div>
+          </div>
         </Link>
       ))}
     </div>
@@ -230,26 +231,73 @@ export function FeatureGrid({ limit }: { limit?: number }) {
 
 export function Personas() {
   const items = [
-    { icon: Briefcase, title: 'Sou dono da barbearia', text: 'Quero cadastrar minha barbearia e gerenciar a equipe', to: '/cadastro', cta: 'Começar grátis' },
-    { icon: Scissors, title: 'Trabalho em uma barbearia', text: 'Sou profissional e quero acessar minha agenda', to: '/login', cta: 'Acessar' },
-    { icon: UserRound, title: 'Sou cliente', text: 'Quero agendar um horário', to: '/cliente/login', cta: 'Entrar' },
+    {
+      icon: Briefcase,
+      badge: 'Para Proprietários',
+      title: 'Sou dono da barbearia',
+      text: 'Quero cadastrar minha barbearia, automatizar agendamentos, zerar faltas e gerenciar minha equipe sem estresse.',
+      to: '/cadastro',
+      cta: 'Começar teste grátis de 30 dias',
+      highlight: true,
+    },
+    {
+      icon: Scissors,
+      badge: 'Para Barbeiros',
+      title: 'Trabalho em uma barbearia',
+      text: 'Sou profissional parceiro e quero acompanhar meus horários, clientes e comissões direto pelo meu celular.',
+      to: '/login',
+      cta: 'Acessar minha agenda',
+      highlight: false,
+    },
+    {
+      icon: UserRound,
+      badge: 'Para Clientes',
+      title: 'Sou cliente',
+      text: 'Quero agendar meu corte ou barba na minha barbearia favorita com rapidez e sem precisar mandar mensagem.',
+      to: '/cliente/login',
+      cta: 'Entrar na área do cliente',
+      highlight: false,
+    },
   ];
+
   return (
-    <section className="bg-muted/50 py-16">
+    <section className="relative overflow-hidden py-16 md:py-24 border-t border-white/5 bg-gradient-to-b from-transparent to-black/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <h2 className="text-center text-3xl font-bold">Como você vai usar o UP BARBER?</h2>
-        <p className="mt-2 text-center text-muted-foreground">Escolha a opção que melhor descreve você.</p>
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-3.5 py-1 text-xs font-semibold text-[#f0cc66]">
+            Praticidade para Todos
+          </span>
+          <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">Como você vai usar o UP BARBER?</h2>
+          <p className="mt-2 text-sm text-gray-400">Escolha a opção que melhor descreve o seu papel hoje.</p>
+        </div>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
           {items.map((p) => (
-            <Link key={p.to} to={p.to} className="group">
-              <Card className="flex h-full flex-col items-center p-8 text-center transition-all group-hover:-translate-y-1 group-hover:shadow-lg">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
-                  <p.icon className="h-7 w-7" />
+            <Link key={p.to} to={p.to} className="group block">
+              <div
+                className={cn(
+                  'relative flex h-full flex-col justify-between rounded-3xl p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1',
+                  p.highlight
+                    ? 'border-2 border-[#d4a93c] bg-gradient-to-b from-[#1b1c26] to-[#0f1016] shadow-xl shadow-[#d4a93c]/10'
+                    : 'border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4a93c]/15 text-[#f0cc66]">
+                      <p.icon className="h-6 w-6" />
+                    </div>
+                    <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-gray-300">
+                      {p.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 text-xl font-bold text-white group-hover:text-[#f0cc66] transition-colors">{p.title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-400">{p.text}</p>
                 </div>
-                <div className="mt-4 text-lg font-semibold">{p.title}</div>
-                <p className="mt-1 text-sm text-muted-foreground">{p.text}</p>
-                <span className="mt-4 text-sm font-medium text-primary">{p.cta} →</span>
-              </Card>
+                <div className="mt-6 flex items-center gap-1 text-xs font-bold text-[#d4a93c] group-hover:translate-x-1 transition-transform">
+                  {p.cta} <span>→</span>
+                </div>
+              </div>
             </Link>
           ))}
         </div>
@@ -259,30 +307,82 @@ export function Personas() {
 }
 
 export const FAQ_ITEMS = [
-  { q: 'Não possuo CNPJ. Posso utilizar o UP BARBER?', a: 'Sim. O UP BARBER pode ser utilizado tanto por pessoa jurídica quanto por pessoa física.' },
-  { q: 'O período gratuito tem alguma limitação de funcionalidades?', a: 'Não. Durante os 30 dias de teste você usa o sistema completo, com todas as funcionalidades e sem limite de profissionais.' },
-  { q: 'Meus profissionais têm acesso ao sistema?', a: 'Sim. Cada profissional pode ter o próprio login para ver a agenda e as comissões, com permissões definidas pelo gestor (dono, gestor, recepção ou profissional).' },
-  { q: 'Posso alterar meu plano futuramente?', a: 'Sim. O plano depende do número de profissionais ativos. Você pode fazer upgrade ou downgrade a cada vencimento da fatura mensal.' },
-  { q: 'O cliente da barbearia precisa pagar ou instalar algo?', a: 'Não. O cliente agenda pelo site da sua barbearia, pelo celular ou computador, sem instalar aplicativo e sem custo.' },
-  { q: 'Consigo exportar meus dados?', a: 'Sim. Clientes, comandas e movimentações podem ser exportados em CSV pelos relatórios, e nosso suporte ajuda com exportações completas.' },
+  {
+    q: 'Não possuo CNPJ. Posso utilizar o UP BARBER na minha barbearia?',
+    a: 'Sim, com certeza! O UP BARBER foi desenhado para atender tanto barbeiros autônomos que atuam como pessoa física (CPF) quanto barbearias estruturadas com MEI, ME ou grandes redes com CNPJ.',
+  },
+  {
+    q: 'O período de teste gratuito de 30 dias tem alguma limitação de recursos?',
+    a: 'Nenhuma limitação. Durante os 30 dias você tem acesso irrestrito ao sistema completo: agenda online, envio de WhatsApp ilimitado, gestão de comandas, comissões e site próprio da barbearia.',
+  },
+  {
+    q: 'Preciso cadastrar cartão de crédito para fazer o teste grátis?',
+    a: 'Não! O cadastro leva menos de 2 minutos e não pede dados de cartão de crédito. Você só decide assinar se o sistema realmente transformar a rotina da sua barbearia após os 30 dias.',
+  },
+  {
+    q: 'Meus profissionais e barbeiros têm acesso pelo próprio celular?',
+    a: 'Sim! Cada barbeiro tem um login exclusivo onde visualiza apenas a própria agenda do dia, horários agendados e extrato de comissões, sem acesso aos dados financeiros gerais da empresa.',
+  },
+  {
+    q: 'O cliente da barbearia precisa baixar algum aplicativo?',
+    a: 'Não! O cliente agenda direto pelo navegador do celular através do link exclusivo da sua barbearia (ex: no Instagram). É rápido, leva menos de 30 segundos e não ocupa memória do aparelho dele.',
+  },
+  {
+    q: 'Como funciona o envio de mensagens pelo WhatsApp?',
+    a: 'A conexão é direta e nativa via QR Code da sua própria barbearia. Não há custo de API por mensagem enviada e você envia confirmações, lembretes de horário e parabéns de forma 100% automatizada.',
+  },
+  {
+    q: 'Posso cancelar a qualquer momento?',
+    a: 'Sim! Não temos contrato de fidelidade ou taxas de rescisão. Você pode cancelar sua assinatura mensal quando desejar com apenas 1 clique no painel.',
+  },
 ];
 
-export function FAQ({ items = FAQ_ITEMS, title = 'Perguntas frequentes' }: { items?: { q: string; a: string }[]; title?: string }) {
+export function FAQ({ items = FAQ_ITEMS, title = 'Perguntas Frequentes' }: { items?: { q: string; a: string }[]; title?: string }) {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section className="py-16">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <h2 className="text-center text-3xl font-bold">{title}</h2>
-        <div className="mt-8 divide-y rounded-xl border">
-          {items.map((it, i) => (
-            <div key={i}>
-              <button className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-medium" onClick={() => setOpen(open === i ? null : i)}>
-                {it.q}
-                <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open === i && 'rotate-180')} />
-              </button>
-              {open === i && <div className="px-5 pb-4 text-sm text-muted-foreground">{it.a}</div>}
-            </div>
-          ))}
+    <section className="relative overflow-hidden py-16 md:py-24 border-t border-white/5">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d4a93c]/30 bg-[#d4a93c]/10 px-3.5 py-1 text-xs font-semibold text-[#f0cc66]">
+            Tire Suas Dúvidas
+          </span>
+          <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">{title}</h2>
+          <p className="mt-2 text-sm text-gray-400">Respostas diretas para as dúvidas mais comuns dos proprietários de barbearias.</p>
+        </div>
+
+        <div className="mt-10 space-y-3">
+          {items.map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <div
+                key={i}
+                className={cn(
+                  'overflow-hidden rounded-2xl border transition-all duration-200',
+                  isOpen
+                    ? 'border-[#d4a93c]/40 bg-[#161720] shadow-lg shadow-[#d4a93c]/5'
+                    : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
+                )}
+              >
+                <button
+                  className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left font-bold text-white text-sm sm:text-base"
+                  onClick={() => setOpen(isOpen ? null : i)}
+                >
+                  <span className={cn(isOpen && 'text-[#f0cc66]')}>{it.q}</span>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200',
+                      isOpen && 'rotate-180 text-[#d4a93c]'
+                    )}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-5 text-xs sm:text-sm leading-relaxed text-gray-300 border-t border-white/5 pt-3">
+                    {it.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -291,17 +391,48 @@ export function FAQ({ items = FAQ_ITEMS, title = 'Perguntas frequentes' }: { ite
 
 export function CTA() {
   return (
-    <section className="bg-gray-950 py-16 text-white">
-      <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-        <h2 className="text-3xl font-bold">Pronto para modernizar sua barbearia?</h2>
-        <p className="mt-3 text-gray-300">Cadastre-se em 2 minutos e use tudo grátis por 30 dias. Sem cartão de crédito.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link to="/cadastro" className="rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90">
-            Teste grátis por 30 dias
+    <section className="relative overflow-hidden py-20 bg-gradient-to-b from-transparent to-[#0e0f14] border-t border-white/10">
+      {/* Background glow auras */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[650px] rounded-full bg-[#d4a93c]/10 blur-[100px]" />
+
+      <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#d4a93c]/40 bg-[#d4a93c]/15 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#f0cc66]">
+          🚀 Comece Hoje Mesmo Sem Custos
+        </span>
+
+        <h2 className="mt-5 text-3xl font-black text-white sm:text-5xl lg:text-6xl tracking-tight">
+          Pronto para transformar sua barbearia em uma <span className="text-[#d4a93c]">máquina de agendamentos?</span>
+        </h2>
+
+        <p className="mx-auto mt-4 max-w-2xl text-base text-gray-300 sm:text-lg">
+          Junte-se a mais de 500 barbearias que já eliminaram o caderno, reduziram as faltas e colocaram a gestão no piloto automático.
+        </p>
+
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            to="/cadastro"
+            className="w-full sm:w-auto rounded-2xl border border-[#f0cc66] bg-gradient-to-r from-[#d4a93c] via-[#e5b842] to-[#c9a227] px-8 py-4 text-base font-extrabold text-black shadow-xl shadow-[#d4a93c]/25 hover:from-[#f0cc66] hover:to-[#d4a93c] transition-all transform hover:scale-[1.02]"
+          >
+            Começar Teste Grátis (30 Dias)
           </Link>
-          <Link to="/funcionalidades" className="rounded-md border border-white/20 px-6 py-3 font-semibold hover:bg-white/10">
-            Ver funcionalidades
+          <Link
+            to="/funcionalidades"
+            className="w-full sm:w-auto rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-base font-bold text-white hover:bg-white/10 hover:border-white/30 transition-all"
+          >
+            Ver Todas as Funcionalidades
           </Link>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-400">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Sem cartão de crédito
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Sem taxa de instalação
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Suporte VIP por WhatsApp
+          </span>
         </div>
       </div>
     </section>
