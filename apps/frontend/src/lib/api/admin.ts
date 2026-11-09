@@ -34,7 +34,10 @@ export interface AdminAtRiskTenant {
 export interface AdminOverview {
   tenants: number;
   byStatus: { status: string; count: number }[];
+  byPlan?: { plan: string; count: number }[];
   users: number;
+  totalClients?: number;
+  totalProfessionals?: number;
   appointmentsLast30d: number;
   gmvLast30d: number;
   mrr: number;
@@ -45,6 +48,20 @@ export interface AdminOverview {
     critical: number;
   };
   atRiskTenants?: AdminAtRiskTenant[];
+  topTenants?: {
+    id: string;
+    name: string;
+    slug: string;
+    appointmentsCount: number;
+    professionalsCount: number;
+    city: string | null;
+    planStatus: string;
+  }[];
+  paymentStats?: {
+    mercadoPago: number;
+    abacatePay: number;
+    point: number;
+  };
 }
 
 export interface AdminTenantRow {

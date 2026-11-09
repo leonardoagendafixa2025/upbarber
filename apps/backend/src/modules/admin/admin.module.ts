@@ -139,13 +139,31 @@ export class AdminService {
   }
 
   async overview() {
-    const [tenants, byStatus, users, appointments30, revenue30, invoicesOpen, allTenants] = await Promise.all([
+    const [
+      tenants,
+      byStatus,
+      byPlan,
+      users,
+      totalClients,
+      totalPros,
+      appointments30,
+      revenue30,
+      invoicesOpen,
+      paymentConns,
+      pointCount,
+      allTenants,
+    ] = await Promise.all([
       this.prisma.tenant.count({ where: { deletedAt: null } }),
       this.prisma.tenant.groupBy({ by: ['planStatus'], where: { deletedAt: null }, _count: true }),
+      this.prisma.tenant.groupBy({ by: ['planCode'], where: { deletedAt: null }, _count: true }),
       this.prisma.user.count(),
+      this.prisma.client.count(),
+      this.prisma.professional.count({ where: { deletedAt: null } }),
       this.prisma.appointment.count({ where: { createdAt: { gte: addDays(new Date(), -30) } } }),
       this.prisma.order.aggregate({ where: { status: 'CLOSED', closedAt: { gte: addDays(new Date(), -30) } }, _sum: { total: true } }),
       this.prisma.invoice.aggregate({ where: { status: { in: ['OPEN', 'OVERDUE'] } }, _sum: { amount: true }, _count: true }),
+      this.prisma.paymentConnection.groupBy({ by: ['provider', 'status'], _count: true }),
+      this.prisma.tenant.count({ where: { deletedAt: null, posProvider: 'MERCADOPAGO_POINT' } }),
       this.prisma.tenant.findMany({
         where: { deletedAt: null },
         select: {
@@ -154,9 +172,12 @@ export class AdminService {
           slug: true,
           phone: true,
           whatsapp: true,
+          addressCity: true,
+          addressState: true,
           createdAt: true,
           isActive: true,
           planStatus: true,
+          planCode: true,
           _count: { select: { appointments: true, professionals: true, services: true } },
           appointments: {
             orderBy: { createdAt: 'desc' },
@@ -192,7 +213,11 @@ export class AdminService {
         phone: t.whatsapp || t.phone || owner?.phone || null,
         ownerName: owner?.name ?? 'Responsável',
         ownerEmail: owner?.email ?? null,
+        addressCity: t.addressCity,
+        addressState: t.addressState,
         planStatus: t.planStatus,
+        planCode: t.planCode,
+        professionalsCount: t._count.professionals,
         appointmentsCount: t._count.appointments,
         lastAppointmentAt: lastAppt,
         health,
@@ -216,16 +241,41 @@ export class AdminService {
       .sort((a, b) => (b.health.status === 'CRITICAL' ? 1 : 0) - (a.health.status === 'CRITICAL' ? 1 : 0))
       .slice(0, 10);
 
+    const topTenants = [...evaluated]
+      .sort((a, b) => b.appointmentsCount - a.appointmentsCount)
+      .slice(0, 5)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        appointmentsCount: t.appointmentsCount,
+        professionalsCount: t.professionalsCount,
+        city: t.addressCity ? `${t.addressCity}${t.addressState ? '/' + t.addressState : ''}` : null,
+        planStatus: t.planStatus,
+      }));
+
+    const mpOnline = paymentConns.find((c) => c.provider === 'MERCADO_PAGO' && c.status === 'CONNECTED')?._count ?? 0;
+    const abacateOnline = paymentConns.find((c) => c.provider === 'ABACATEPAY' && c.status === 'CONNECTED')?._count ?? 0;
+
     return {
       tenants,
       byStatus: byStatus.map((s) => ({ status: s.planStatus, count: s._count })),
+      byPlan: byPlan.map((p) => ({ plan: p.planCode, count: p._count })),
       users,
+      totalClients,
+      totalProfessionals: totalPros,
       appointmentsLast30d: appointments30,
       gmvLast30d: money(revenue30._sum.total),
       mrr: money(mrr.reduce((s, t) => s + (PLANS.find((p) => p.code === t.planCode)?.promoPrice ?? 0), 0)),
       openInvoices: { count: invoicesOpen._count, amount: money(invoicesOpen._sum.amount) },
       healthSummary,
       atRiskTenants,
+      topTenants,
+      paymentStats: {
+        mercadoPago: mpOnline,
+        abacatePay: abacateOnline,
+        point: pointCount,
+      },
     };
   }
 

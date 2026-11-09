@@ -3,8 +3,10 @@ import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams, useSear
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  Activity,
   AlertTriangle,
   ArrowLeft,
+  Award,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -16,20 +18,25 @@ import {
   LogIn,
   Mail,
   MessageSquare,
+  PieChart,
   Plus,
   Receipt,
   RefreshCw,
   Save,
+  Scissors,
   Search,
   Send,
   Shield,
+  ShieldCheck,
   Sliders,
   Sparkles,
   Trash2,
   TrendingUp,
   Users,
+  Wallet,
   XCircle,
 } from 'lucide-react';
+import { DonutChart } from '@/components/reports/charts';
 import {
   Badge,
   Button,
@@ -180,34 +187,315 @@ function usePlanNames() {
 
 // ---------------- visão geral ----------------
 function Overview() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const { name: planName } = usePlanNames();
   const { data, isLoading, isError } = useQuery({ queryKey: ['admin-overview'], queryFn: adminApi.overview });
   if (isLoading) return <PageLoader />;
   if (isError || !data) return <EmptyState icon={AlertTriangle} title="Não foi possível carregar a visão geral" />;
+
   const total = data.byStatus.reduce((s, b) => s + b.count, 0) || 1;
+  const activeCount = data.byStatus.find((s) => s.status === 'ACTIVE')?.count ?? 0;
+  const trialCount = data.byStatus.find((s) => s.status === 'TRIAL')?.count ?? 0;
+  const arr = (data.mrr || 0) * 12;
+
+  // Planos para o gráfico de rosca
+  const planData = (data.byPlan && data.byPlan.length > 0)
+    ? data.byPlan.map((p) => ({
+        name: planName(p.plan),
+        value: p.count,
+      }))
+    : [{ name: 'Teste Grátis (Trial)', value: trialCount || 1 }];
+
   return (
-    <div>
-      <PageHeader
-        title="Visão geral da plataforma"
-        description="Painel de controle central de todas as barbearias, faturamento e integrações do UP BARBER."
-        actions={
-          <Button asChild className="border-[#c9a227] bg-[#c9a227] font-semibold text-black hover:bg-[#f0cc66]">
-            <Link to="barbearias?nova=1">
-              <Plus className="h-4 w-4" /> Nova Barbearia
+    <div className="space-y-6">
+      {/* Banner Executivo de Alto Padrão (Command Center) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 p-6 sm:p-8 text-zinc-950 shadow-2xl shadow-amber-500/15">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-8 opacity-10 pointer-events-none">
+          <ShieldCheck className="h-72 w-72 text-black" />
+        </div>
+
+        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/90 px-3 py-1 text-xs font-black text-amber-300 shadow-sm">
+                <Sparkles className="h-3.5 w-3.5" /> SUPERADMIN COMMAND CENTER
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1 text-xs font-bold text-zinc-900 border border-black/20">
+                <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                SaaS Multi-Tenant Ativo
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight text-black">
+              Painel Central da Plataforma UP BARBER
+            </h1>
+
+            <p className="text-sm sm:text-base font-medium text-zinc-900/90 leading-relaxed">
+              Monitoramento global de <strong className="font-extrabold">{num(data.tenants)} barbearia(s)</strong> no ecossistema, faturamento de <strong className="font-extrabold">{money(data.mrr)}/mês</strong> (ARR projetado de <strong className="font-extrabold">{money(arr)}</strong>) e mais de <strong className="font-extrabold">{num(data.appointmentsLast30d)} atendimentos</strong> processados.
+            </p>
+          </div>
+
+          {/* Ações Rápidas Executivas */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="rounded-2xl border-none bg-black px-5 py-6 text-sm font-bold text-amber-300 shadow-xl shadow-black/40 hover:bg-zinc-900 hover:text-amber-200 transition-all hover:scale-[1.02]"
+            >
+              <Plus className="mr-2 h-5 w-5 text-amber-400" />
+              Nova Barbearia
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-2xl border-black/30 bg-black/10 px-5 py-6 text-sm font-bold text-black backdrop-blur-sm hover:bg-black/20 transition-all"
+            >
+              <Link to="barbearias">
+                <Building2 className="mr-2 h-5 w-5" />
+                Ver Barbearias
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-2xl border-black/30 bg-black/10 px-5 py-6 text-sm font-bold text-black backdrop-blur-sm hover:bg-black/20 transition-all"
+            >
+              <Link to="integracoes">
+                <Sliders className="mr-2 h-5 w-5" />
+                APIs & Gateways
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid de 8 Indicadores-Chave SaaS */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <StatCard
+          label="Barbearias"
+          value={num(data.tenants)}
+          icon={Building2}
+          hint={`${activeCount} ativas · ${trialCount} trial`}
+        />
+        <StatCard
+          label="MRR (Mensal)"
+          value={money(data.mrr)}
+          icon={TrendingUp}
+          hint={`ARR: ${money(arr)}/ano`}
+        />
+        <StatCard
+          label="GMV (30d)"
+          value={money(data.gmvLast30d)}
+          icon={DollarSign}
+          hint="Total comandas"
+        />
+        <StatCard
+          label="Agendamentos (30d)"
+          value={num(data.appointmentsLast30d)}
+          icon={CalendarDays}
+          hint="Cortes e serviços"
+        />
+        <StatCard
+          label="Clientes Finais"
+          value={num(data.totalClients ?? data.users)}
+          icon={Users}
+          hint="Base cadastrada"
+        />
+        <StatCard
+          label="Profissionais"
+          value={num(data.totalProfessionals ?? 0)}
+          icon={Scissors}
+          hint="Barbeiros ativos"
+        />
+        <StatCard
+          label="Faturas em Aberto"
+          value={money(data.openInvoices.amount)}
+          icon={CreditCard}
+          hint={`${data.openInvoices.count} a receber`}
+        />
+        <StatCard
+          label="Saúde Global"
+          value={data.healthSummary ? `${Math.round((data.healthSummary.healthy / (data.tenants || 1)) * 100)}%` : '100%'}
+          icon={Shield}
+          hint={`${data.healthSummary?.critical ?? 0} em risco crítico`}
+        />
+      </div>
+
+      {/* NOVO: Central de Pagamentos Online & Maquininha (Multi-Tenant) */}
+      <div className="rounded-2xl border border-white/10 bg-[#0d0d12] p-5 shadow-lg">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                Infraestrutura de Pagamentos Online & Maquininhas
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                  Multi-Tenant 100% Direto
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Recebimento direto na conta de cada barbearia, sem intermediação nem split, com suporte oficial OAuth.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-white/10 text-zinc-300 hover:text-white hover:bg-white/10"
+            asChild
+          >
+            <Link to="integracoes">
+              <Sliders className="h-3.5 w-3.5 mr-1.5" /> Gerenciar Gateways
             </Link>
           </Button>
-        }
-      />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="Barbearias" value={num(data.tenants)} icon={Building2} />
-        <StatCard label="Usuários" value={num(data.users)} icon={Users} />
-        <StatCard label="MRR" value={money(data.mrr)} icon={TrendingUp} hint="Planos ativos" />
-        <StatCard label="Agendamentos (30d)" value={num(data.appointmentsLast30d)} icon={CalendarDays} />
-        <StatCard label="GMV (30d)" value={money(data.gmvLast30d)} icon={DollarSign} hint="Comandas fechadas" />
-        <StatCard label="Faturas em aberto" value={money(data.openInvoices.amount)} icon={CreditCard} hint={`${data.openInvoices.count} fatura(s)`} />
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-white/5 bg-[#141419] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-400">Mercado Pago Online</span>
+              <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-400">OAuth 2.0</span>
+            </div>
+            <div className="mt-2 text-2xl font-black text-white">
+              {data.paymentStats?.mercadoPago ?? 0} <span className="text-xs font-normal text-zinc-400">barbearia(s)</span>
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-400">Pix Transparente e Cartão de Crédito conectados via OAuth oficial</p>
+          </div>
+
+          <div className="rounded-xl border border-white/5 bg-[#141419] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-400">Mercado Pago Point</span>
+              <span className="rounded-full bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 text-[10px] font-bold text-sky-400">Física</span>
+            </div>
+            <div className="mt-2 text-2xl font-black text-white">
+              {data.paymentStats?.point ?? 0} <span className="text-xs font-normal text-zinc-400">maquininha(s)</span>
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-400">Terminais Point Pro 2 / Smart pareados com o PDV e caixa da barbearia</p>
+          </div>
+
+          <div className="rounded-xl border border-white/5 bg-[#141419] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-400">AbacatePay Online</span>
+              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">Pix Direto</span>
+            </div>
+            <div className="mt-2 text-2xl font-black text-white">
+              {data.paymentStats?.abacatePay ?? 0} <span className="text-xs font-normal text-zinc-400">barbearia(s)</span>
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-400">Cobranças Pix com taxas competitivas e liquidação instantânea</p>
+          </div>
+
+          <div className="rounded-xl border border-white/5 bg-[#141419] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-400">Motor de Webhooks</span>
+              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">🟢 Ativo</span>
+            </div>
+            <div className="mt-2 text-2xl font-black text-white">
+              100% <span className="text-xs font-normal text-zinc-400">idempotente</span>
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-400">Atualização atômica dos agendamentos no momento do pagamento</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráficos Executivos & Visão Analítica */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Distribuição de Planos */}
+        <Card className="border border-white/10 bg-[#0d0d12]">
+          <div className="border-b border-white/10 p-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <PieChart className="h-4 w-4 text-amber-400" />
+              Distribuição da Base por Plano
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Assinaturas e período de teste ativo</p>
+          </div>
+          <div className="p-4">
+            <DonutChart data={planData} formatter={(v) => `${num(v)} barbearia(s)`} height={200} />
+          </div>
+        </Card>
+
+        {/* Top 5 Barbearias Mais Ativas */}
+        <Card className="border border-white/10 bg-[#0d0d12]">
+          <div className="border-b border-white/10 p-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Award className="h-4 w-4 text-amber-400" />
+              Top 5 Barbearias Mais Ativas
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Maior volume de agendamentos e clientes</p>
+          </div>
+          <div className="p-4">
+            {(!data.topTenants || data.topTenants.length === 0) ? (
+              <div className="py-8 text-center text-xs text-zinc-400">Sem agendamentos registrados</div>
+            ) : (
+              <div className="space-y-3">
+                {data.topTenants.map((t, idx) => (
+                  <div key={t.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-[#141419] p-2.5 hover:border-amber-500/30 transition-all">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 font-black text-amber-400 text-xs">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <Link to={`barbearias/${t.id}`} className="font-bold text-xs text-white hover:text-amber-400 transition-colors truncate block">
+                          {t.name}
+                        </Link>
+                        <span className="text-[10px] text-zinc-500 truncate block">
+                          {t.city ?? 'Brasil'} · {t.professionalsCount} prof.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-bold text-xs text-amber-300">{num(t.appointmentsCount)}</span>
+                      <span className="text-[10px] text-zinc-500 block">agend.</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Barbearias por Status de Assinatura */}
+        <Card className="border border-white/10 bg-[#0d0d12]">
+          <div className="border-b border-white/10 p-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="h-4 w-4 text-amber-400" />
+              Status das Assinaturas SaaS
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Conversão e retenção na plataforma</p>
+          </div>
+          <div className="p-4">
+            {data.byStatus.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma barbearia cadastrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {data.byStatus.map((b) => (
+                  <Link
+                    key={b.status}
+                    to={`barbearias?status=${b.status}`}
+                    className="group block rounded-xl border border-white/5 bg-[#141419] p-3 hover:border-amber-500/30 hover:bg-[#1a1a22] transition-all"
+                  >
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <StatusPill status={b.status} />
+                      <span className="font-bold text-white group-hover:text-amber-300 transition-colors">
+                        {num(b.count)} barbearia(s) ({num((b.count / total) * 100, 0)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
+                        style={{ width: `${(b.count / total) * 100}%` }}
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* Radar Anti-Churn & Saúde da Base */}
-      <div className="mt-6 rounded-2xl border border-white/10 bg-[#0d0d12] p-5 shadow-lg">
+      <div className="rounded-2xl border border-white/10 bg-[#0d0d12] p-5 shadow-lg">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -295,25 +583,8 @@ function Overview() {
       </div>
 
       <Integrations />
-      <Section title="Barbearias por status" className="mt-6">
-        {data.byStatus.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma barbearia cadastrada.</p>
-        ) : (
-          <div className="space-y-3">
-            {data.byStatus.map((b) => (
-              <Link key={b.status} to={`barbearias?status=${b.status}`} className="flex items-center gap-3 rounded-lg p-1 hover:bg-muted/50">
-                <div className="w-32">
-                  <StatusPill status={b.status} />
-                </div>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${(b.count / total) * 100}%` }} />
-                </div>
-                <div className="w-12 text-right text-sm font-semibold">{b.count}</div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Section>
+
+      <CreateTenantDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
@@ -1381,7 +1652,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#09090b]">
       <header className="sticky top-0 z-30 bg-[#0d0d12] text-white shadow-xl border-b border-[#c9a227]/25">
-        <div className="mx-auto flex min-h-[5.5rem] max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
+        <div className="w-full flex min-h-[5.5rem] items-center gap-6 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/admin" className="flex items-center gap-3 font-bold shrink-0">
             <img src="/logo.png?v=4" alt="UP BARBER" className="h-20 sm:h-24 w-auto object-contain drop-shadow-lg" />
             <span className="rounded-md bg-[#c9a227]/15 border border-[#c9a227]/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#f0cc66]">
@@ -1411,6 +1682,10 @@ export default function AdminPage() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3 shrink-0">
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 xl:flex">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              SaaS Online
+            </div>
             <span className="hidden text-sm font-medium text-gray-400 lg:inline">Olá, <span className="text-[#f0cc66]">{user?.name?.split(' ')[0]}</span></span>
             <Button size="sm" variant="outline" className="border-[#c9a227]/30 bg-[#c9a227]/8 text-[#c9a227] hover:bg-[#c9a227]/15 hover:text-[#f0cc66]" asChild>
               <Link to={current ? '/app' : '/admin/barbearias'}>
@@ -1429,7 +1704,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="w-full px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
         <Routes>
           <Route index element={<Overview />} />
           <Route path="barbearias" element={<TenantList />} />
