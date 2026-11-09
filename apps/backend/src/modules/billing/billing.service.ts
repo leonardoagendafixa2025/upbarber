@@ -39,7 +39,6 @@ export class BillingService {
     const suggested = planForProfessionals(Math.max(1, activePros));
     const now = new Date();
     const trialDaysLeft = t.trialEndsAt ? Math.max(0, Math.ceil((t.trialEndsAt.getTime() - now.getTime()) / 86400000)) : null;
-    const isSandbox = await this.isSandboxMode();
     return {
       plan: current,
       status: t.planStatus,
@@ -49,17 +48,10 @@ export class BillingService {
       activeProfessionals: activePros,
       suggestedPlan: suggested,
       plans: PLANS.filter((p) => p.code !== 'TRIAL'),
-      isSandbox,
-      invoices: invoices.map((i) => {
-        const live = this.liveCheckoutUrl(i);
-        const prodUrl = this.toProductionUrl(live);
-        const sandUrl = this.toSandboxUrl(live);
-        return {
-          ...i,
-          checkoutUrl: isSandbox ? sandUrl : prodUrl,
-          sandboxCheckoutUrl: sandUrl,
-        };
-      }),
+      invoices: invoices.map((i) => ({
+        ...i,
+        checkoutUrl: this.liveCheckoutUrl(i),
+      })),
       onlinePayments: this.enabled,
     };
   }
@@ -83,16 +75,10 @@ export class BillingService {
       await this.prisma.tenant.update({ where: { id: tenantId }, data: { planCode, maxProfessionals: plan.maxProfessionals } });
     }
 
-    const isSandbox = await this.isSandboxMode();
     const checkoutUrl = await this.ensureInvoiceCheckout(invoice, t);
-    const prodUrl = this.toProductionUrl(checkoutUrl);
-    const sandUrl = this.toSandboxUrl(checkoutUrl);
-    const chosenUrl = isSandbox ? sandUrl : prodUrl;
     return {
-      invoice: { ...invoice, checkoutUrl: chosenUrl, sandboxCheckoutUrl: sandUrl },
-      checkoutUrl: chosenUrl,
-      sandboxCheckoutUrl: sandUrl,
-      isSandbox,
+      invoice: { ...invoice, checkoutUrl },
+      checkoutUrl,
       manual: false,
     };
   }
@@ -105,15 +91,9 @@ export class BillingService {
     if (inv.status === 'PAID') throw new BadRequestException('Esta fatura já está paga');
     if (inv.status === 'CANCELLED') throw new BadRequestException('Esta fatura foi cancelada');
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
-    const isSandbox = await this.isSandboxMode();
     const checkoutUrl = await this.ensureInvoiceCheckout(inv, t);
-    const prodUrl = this.toProductionUrl(checkoutUrl);
-    const sandUrl = this.toSandboxUrl(checkoutUrl);
-    const chosenUrl = isSandbox ? sandUrl : prodUrl;
     return {
-      checkoutUrl: chosenUrl,
-      sandboxCheckoutUrl: sandUrl,
-      isSandbox,
+      checkoutUrl,
       invoiceId: inv.id,
     };
   }

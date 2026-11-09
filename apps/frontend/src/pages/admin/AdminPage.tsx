@@ -1475,18 +1475,6 @@ function IntegrationsSettings() {
                 </Button>
               </div>
             </Field>
-            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4">
-              <div>
-                <div className="text-sm font-semibold text-white">Modo Sandbox / Testes com Cartão Simulado</div>
-                <div className="text-xs text-zinc-400 mt-0.5 max-w-xl">
-                  Ative para testar a assinatura de planos com os cartões de teste oficiais do Mercado Pago (ex: titular APRO, final 3311) sem cobrança real.
-                </div>
-              </div>
-              <Switch
-                checked={Boolean(form.mercadoPago.sandbox)}
-                onCheckedChange={(checked) => setForm((s) => ({ ...s, mercadoPago: { ...s.mercadoPago, sandbox: checked } }))}
-              />
-            </div>
 
             <p className="text-xs text-zinc-400">
               Cada barbearia autoriza sua própria conta via OAuth oficial e recebe os valores de Pix e Cartão diretamente, sem split e sem intermediários. As assinaturas dos planos são liquidadas diretamente na conta principal da plataforma via Mercado Pago Checkout Pro.
